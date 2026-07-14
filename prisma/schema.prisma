@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrganizationType {
+  SOLO
+  SALON
+  BRAND
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PrepaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Organization {
+  id        String           @id @default(cuid())
+  type      OrganizationType
+  name      String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  locations Location[]
+}
+
+model Location {
+  id             String  @id @default(cuid())
+  organizationId String
+  address        String
+  city           String
+  district       String?
+  lat            Float?
+  lng            Float?
+  // Working hours per weekday, e.g. { "mon": ["09:00","18:00"], ... }
+  workingHours   Json
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  staff        Staff[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Staff {
+  id          String  @id @default(cuid())
+  locationId  String
+  username    String  @unique
+  displayName String
+  bio         String?
+  avatarUrl   String?
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  services        StaffService[]
+  bookings        Booking[]
+  waitlistEntries WaitlistEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Fixed taxonomy tree (e.g. nails -> nails.manicure -> nails.manicure.gel).
+// Seeded via migration/seed script, not user-editable.
+model ServiceCategory {
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  name     String
+  parentId String?
+
+  parent   ServiceCategory?  @relation("ServiceCategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children ServiceCategory[] @relation("ServiceCategoryTree")
+
+  staffServices StaffService[]
+}
+
+model StaffService {
+  id              String  @id @default(cuid())
+  staffId         String
+  categoryId      String
+  displayName     String
+  // Money is always an integer, never a float.
+  priceCents      Int
+  durationMinutes Int
+  isActive        Boolean @default(true)
+
+  staff    Staff           @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  category ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  bookings      Booking[]
+  reminderRules ReminderRule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Client {
+  id             String  @id @default(cuid())
+  // Normalized to +380XXXXXXXXX
+  phone          String  @unique
+  name           String?
+  telegramChatId String?
+  notes          String?
+
+  // Computed from no-shows / late cancellations.
+  reliabilityScore      Int @default(100)
+  noShowCount           Int @default(0)
+  lateCancellationCount Int @default(0)
+
+  bookings        Booking[]
+  waitlistEntries WaitlistEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Overlap prevention (a staff member cannot have two overlapping bookings)
+// must be enforced at the DB transaction level, e.g. via a Postgres
+// exclusion constraint added in a follow-up migration — Prisma's schema
+// language can't express EXCLUDE USING gist directly.
+model Booking {
+  id        String        @id @default(cuid())
+  clientId  String
+  staffId   String
+  serviceId String
+  status    BookingStatus @default(PENDING)
+
+  // Always stored in UTC; convert with date-fns-tz at the edges.
+  slotStart DateTime
+  slotEnd   DateTime
+
+  cancelledAt DateTime?
+
+  client  Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  staff   Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  service StaffService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  prepayment Prepayment?
+  review     Review?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([staffId, slotStart])
+}
+
+model Prepayment {
+  id            String           @id @default(cuid())
+  bookingId     String           @unique
+  amountCents   Int
+  liqpayOrderId String?
+  status        PrepaymentStatus @default(PENDING)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Only allowed when booking.status = COMPLETED; enforced in app logic.
+// @unique on bookingId enforces one review per booking.
+model Review {
+  id        String  @id @default(cuid())
+  bookingId String  @unique
+  rating    Int
+  comment   String?
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model WaitlistEntry {
+  id          String    @id @default(cuid())
+  clientId    String
+  staffId     String
+  desiredFrom DateTime
+  desiredTo   DateTime
+  notifiedAt  DateTime?
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  staff  Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model ReminderRule {
+  id              String  @id @default(cuid())
+  serviceId       String
+  weeksAfterVisit Int
+  messageTemplate String
+  isActive        Boolean @default(true)
+
+  service StaffService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
