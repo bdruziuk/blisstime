@@ -59,3 +59,11 @@ export const locationSchema = z.object({
   ),
 });
 export type LocationInput = z.infer<typeof locationSchema>;
+
+export const bookingSchema = z.object({
+  serviceId: z.string().min(1, "Оберіть послугу"),
+  slotStartISO: z.string().min(1, "Оберіть час"),
+  clientName: z.string().trim().min(2, "Мінімум 2 символи"),
+  clientPhone: z.string().trim().min(9, "Некоректний номер телефону"),
+});
+export type BookingInput = z.infer<typeof bookingSchema>;

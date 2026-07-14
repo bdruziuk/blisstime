@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -16,9 +17,9 @@ export default async function DashboardPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
       <h1 className="text-3xl font-semibold">Привіт, {staff.displayName}!</h1>
-      <p className="text-muted-foreground">
+      <Link href={`/@${staff.username}`} className="text-muted-foreground underline">
         Ваша публічна сторінка: /@{staff.username}
-      </p>
+      </Link>
       <p className="text-muted-foreground">
         {staff.location.city}, {staff.location.address}
       </p>
