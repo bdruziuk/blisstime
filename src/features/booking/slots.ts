@@ -76,3 +76,10 @@ export function generateSlotsForDate({
 
   return slots;
 }
+
+/** UTC [start, end) bounds for a calendar date (YYYY-MM-DD) in the business timezone. */
+export function getDayBoundsUTC(dateISO: string, timezone: string = BUSINESS_TIMEZONE) {
+  const start = fromZonedTime(`${dateISO}T00:00:00`, timezone);
+  const end = fromZonedTime(`${dateISO}T23:59:59.999`, timezone);
+  return { start, end };
+}
