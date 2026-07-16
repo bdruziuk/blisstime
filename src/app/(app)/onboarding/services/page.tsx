@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ServiceForm } from "@/features/booking/components/service-form";
+import { AiImportPanel } from "@/features/ai-import/components/ai-import-panel";
 import { goToHoursStep, removeService } from "@/features/booking/actions";
 
 export default async function OnboardingServicesPage() {
@@ -49,6 +50,15 @@ export default async function OnboardingServicesPage() {
               ))}
             </ul>
           )}
+
+          <AiImportPanel
+            categories={leafCategories.map((c) => ({
+              id: c.id,
+              slug: c.slug,
+              name: c.name,
+              parentName: c.parent?.name ?? "",
+            }))}
+          />
 
           <ServiceForm
             categories={leafCategories.map((c) => ({

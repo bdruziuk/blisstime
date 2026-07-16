@@ -54,6 +54,13 @@ const tree = [
     name: "Масаж",
     children: [{ slug: "massage.relax", name: "Розслаблюючий масаж" }],
   },
+  {
+    slug: "misc",
+    name: "Інше",
+    // Fallback for AI-import items that don't match a known category —
+    // the master re-maps them manually (business rule 8).
+    children: [{ slug: "misc.other", name: "Інше" }],
+  },
 ];
 
 async function main() {
