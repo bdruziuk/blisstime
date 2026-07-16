@@ -1,13 +1,8 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Manrope, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const playfairDisplay = Playfair_Display({
-  variable: "--font-display",
-  subsets: ["latin", "cyrillic"],
-});
-
-const manrope = Manrope({
+const inter = Inter({
   variable: "--font-body",
   subsets: ["latin", "cyrillic"],
 });
@@ -29,11 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk">
-      <body
-        className={`${playfairDisplay.variable} ${manrope.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <body className={`${inter.variable} ${geistMono.variable} antialiased`}>{children}</body>
     </html>
   );
 }

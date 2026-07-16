@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Globe, Scissors, MapPin, ArrowUpRight } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,28 +19,38 @@ export default async function DashboardPage() {
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10">
       <div>
-        <h1 className="font-heading text-3xl font-semibold">Привіт, {staff.displayName}!</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="font-heading text-3xl font-bold">Привіт, {staff.displayName}!</h1>
+        <p className="text-muted-foreground mt-1.5 flex items-center gap-1.5">
+          <MapPin className="size-4" />
           {staff.location.city}, {staff.location.address}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardContent className="p-5">
-            <p className="text-muted-foreground text-sm">Публічна сторінка</p>
-            <Link
-              href={`/@${staff.username}`}
-              className="text-primary mt-1 block font-medium underline underline-offset-4"
-            >
-              /@{staff.username}
-            </Link>
+        <Card className="card-hover">
+          <CardContent className="flex items-start justify-between p-5">
+            <div>
+              <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+                <Globe className="size-4" />
+                Публічна сторінка
+              </p>
+              <Link
+                href={`/@${staff.username}`}
+                className="text-primary mt-1.5 flex items-center gap-1 font-semibold"
+              >
+                /@{staff.username}
+                <ArrowUpRight className="size-3.5" />
+              </Link>
+            </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="card-hover">
           <CardContent className="p-5">
-            <p className="text-muted-foreground text-sm">Послуг додано</p>
-            <p className="mt-1 text-2xl font-semibold">{staff.services.length}</p>
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+              <Scissors className="size-4" />
+              Послуг додано
+            </p>
+            <p className="mt-1.5 text-2xl font-bold">{staff.services.length}</p>
           </CardContent>
         </Card>
       </div>

@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "@/features/booking/components/login-form";
 
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
-      <Link href="/" className="font-heading text-2xl font-semibold">
+      <Link href="/" className="font-heading flex items-center gap-1.5 text-2xl font-bold">
+        <Sparkles className="text-primary size-6" strokeWidth={2.25} />
         BlissTime
       </Link>
       <Card className="w-full max-w-sm">
