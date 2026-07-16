@@ -29,10 +29,10 @@ export default function HomePage() {
           самі, а ви керуєте розкладом в одному місці.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <Button render={<Link href="/register" />} size="lg">
+          <Button render={<Link href="/register" />} nativeButton={false} size="lg">
             Створити кабінет майстра
           </Button>
-          <Button render={<Link href="/login" />} size="lg" variant="outline">
+          <Button render={<Link href="/login" />} nativeButton={false} size="lg" variant="outline">
             Увійти
           </Button>
         </div>
