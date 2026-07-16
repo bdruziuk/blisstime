@@ -61,6 +61,20 @@ export function BookingWidget({
   }, [staffId, selectedServiceId, date]);
 
   if (state && "success" in state) {
+    if (state.status === "PENDING") {
+      return (
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p className="text-lg font-medium">Заявку надіслано!</p>
+            <p className="text-muted-foreground mt-1 text-sm">
+              {state.medianResponseMinutes
+                ? `Майстер зазвичай підтверджує протягом ${state.medianResponseMinutes} хв.`
+                : "Майстер підтвердить запис найближчим часом."}
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
     return (
       <Card>
         <CardContent className="p-6 text-center">

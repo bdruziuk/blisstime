@@ -24,6 +24,14 @@ export default async function DashboardPage() {
         {staff.location.city}, {staff.location.address}
       </p>
       <p className="text-muted-foreground">Послуг додано: {staff.services.length}</p>
+      <div className="flex gap-4">
+        <Link href="/dashboard/bookings" className="underline">
+          Записи
+        </Link>
+        <Link href="/dashboard/settings" className="underline">
+          Налаштування
+        </Link>
+      </div>
     </main>
   );
 }

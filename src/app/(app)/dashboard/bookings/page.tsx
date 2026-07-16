@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDayBoundsUTC, BUSINESS_TIMEZONE } from "@/features/booking/slots";
+import { expireStaleHolds } from "@/features/booking/expiry";
 import { AdminBookingsPanel } from "@/features/booking/components/admin-bookings-panel";
 
 function todayISOInBusinessTz() {
@@ -26,6 +27,8 @@ export default async function BookingsPage({
   const staff = await prisma.staff.findUnique({ where: { userId: session.user.id } });
   if (!staff) redirect("/register");
   if (!staff.onboardedAt) redirect("/onboarding/profile");
+
+  await expireStaleHolds(staff.id);
 
   const { date } = await searchParams;
   const dateISO = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : todayISOInBusinessTz();
@@ -64,6 +67,7 @@ export default async function BookingsPage({
           status: b.status,
           slotStartISO: b.slotStart.toISOString(),
           slotEndISO: b.slotEnd.toISOString(),
+          holdExpiresAtISO: b.holdExpiresAt ? b.holdExpiresAt.toISOString() : null,
           clientName: b.client.name ?? b.client.phone,
           clientPhone: b.client.phone,
           serviceId: b.serviceId,

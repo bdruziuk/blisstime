@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   cancelBooking,
+  confirmBooking,
+  declineBooking,
   createManualBooking,
   rescheduleBooking,
   type ActionState,
@@ -18,6 +20,7 @@ type BookingItem = {
   status: string;
   slotStartISO: string;
   slotEndISO: string;
+  holdExpiresAtISO: string | null;
   clientName: string;
   clientPhone: string;
   serviceId: string;
@@ -33,8 +36,10 @@ type ServiceItem = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Очікує",
+  PENDING: "Очікує підтвердження",
   CONFIRMED: "Підтверджено",
+  DECLINED: "Відхилено",
+  EXPIRED: "Хол минув",
   COMPLETED: "Завершено",
   CANCELLED: "Скасовано",
   NO_SHOW: "Не прийшов",
@@ -46,6 +51,12 @@ function formatTime(iso: string) {
     minute: "2-digit",
     timeZone: "Europe/Kyiv",
   });
+}
+
+function holdMinutesLeft(holdExpiresAtISO: string | null) {
+  if (!holdExpiresAtISO) return null;
+  const ms = new Date(holdExpiresAtISO).getTime() - Date.now();
+  return ms > 0 ? Math.ceil(ms / 60_000) : 0;
 }
 
 function SlotPicker({
@@ -153,7 +164,7 @@ function RescheduleForm({
 
 function BookingRow({ staffId, booking }: { staffId: string; booking: BookingItem }) {
   const [rescheduling, setRescheduling] = useState(false);
-  const canAct = booking.status === "PENDING" || booking.status === "CONFIRMED";
+  const minutesLeft = holdMinutesLeft(booking.holdExpiresAtISO);
 
   return (
     <li className="rounded-md border px-4 py-3 text-sm">
@@ -166,9 +177,22 @@ function BookingRow({ staffId, booking }: { staffId: string; booking: BookingIte
           <div className="text-muted-foreground text-xs">
             {booking.clientName} · {booking.clientPhone} ·{" "}
             {STATUS_LABELS[booking.status] ?? booking.status}
+            {booking.status === "PENDING" && minutesLeft !== null && (
+              <> · хол ще {minutesLeft} хв</>
+            )}
           </div>
         </div>
-        {canAct && (
+        {booking.status === "PENDING" && (
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => confirmBooking(booking.id)}>
+              Підтвердити
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => declineBooking(booking.id)}>
+              Відхилити
+            </Button>
+          </div>
+        )}
+        {booking.status === "CONFIRMED" && (
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setRescheduling((v) => !v)}>
               Перенести

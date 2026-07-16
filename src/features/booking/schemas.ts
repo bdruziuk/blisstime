@@ -67,3 +67,18 @@ export const bookingSchema = z.object({
   clientPhone: z.string().trim().min(9, "Некоректний номер телефону"),
 });
 export type BookingInput = z.infer<typeof bookingSchema>;
+
+export const CONFIRMATION_MODES = ["MANUAL", "AUTO_ALL", "AUTO_TRUSTED"] as const;
+export type ConfirmationModeValue = (typeof CONFIRMATION_MODES)[number];
+
+export const CONFIRMATION_MODE_LABELS: Record<ConfirmationModeValue, string> = {
+  MANUAL: "Підтверджувати кожен запис вручну",
+  AUTO_ALL: "Підтверджувати всі записи автоматично",
+  AUTO_TRUSTED: "Автоматично тільки для клієнтів з хорошим рейтингом надійності",
+};
+
+export const bookingSettingsSchema = z.object({
+  confirmationMode: z.enum(CONFIRMATION_MODES),
+  holdDurationMinutes: z.coerce.number().int().min(60).max(1440),
+});
+export type BookingSettingsInput = z.infer<typeof bookingSettingsSchema>;

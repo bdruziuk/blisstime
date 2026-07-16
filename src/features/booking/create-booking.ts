@@ -1,11 +1,46 @@
 import { prisma } from "@/lib/prisma";
 
-export type CreateBookingResult = { error: string } | { success: true };
+export type BookableStatus = "PENDING" | "CONFIRMED";
+
+export type CreateBookingResult =
+  | { error: string }
+  | { success: true; status: BookableStatus };
+
+const AUTO_TRUSTED_MIN_RELIABILITY = 70;
+
+/**
+ * Decides whether a client-initiated booking gets auto-confirmed or lands
+ * as a pending request with a hold, per the master's confirmationMode.
+ * Manual admin-entered bookings skip this entirely (always CONFIRMED).
+ */
+export function decideInitialBookingStatus({
+  confirmationMode,
+  holdDurationMinutes,
+  clientReliabilityScore,
+}: {
+  confirmationMode: "MANUAL" | "AUTO_ALL" | "AUTO_TRUSTED";
+  holdDurationMinutes: number;
+  clientReliabilityScore: number | null;
+}): { status: BookableStatus; holdExpiresAt: Date | null } {
+  const autoConfirm =
+    confirmationMode === "AUTO_ALL" ||
+    (confirmationMode === "AUTO_TRUSTED" &&
+      (clientReliabilityScore ?? 100) >= AUTO_TRUSTED_MIN_RELIABILITY);
+
+  if (autoConfirm) {
+    return { status: "CONFIRMED", holdExpiresAt: null };
+  }
+  return {
+    status: "PENDING",
+    holdExpiresAt: new Date(Date.now() + holdDurationMinutes * 60_000),
+  };
+}
 
 /**
  * Finds/creates the client by phone and inserts the booking, re-checking
  * for overlaps immediately before the insert. The `booking_no_overlap`
- * Postgres exclusion constraint is the final backstop against races.
+ * Postgres exclusion constraint (which also treats an active PENDING hold
+ * as blocking) is the final backstop against races.
  */
 export async function insertBookingForClient({
   staffId,
@@ -14,6 +49,8 @@ export async function insertBookingForClient({
   slotEnd,
   clientPhone,
   clientName,
+  status,
+  holdExpiresAt,
 }: {
   staffId: string;
   serviceId: string;
@@ -21,11 +58,13 @@ export async function insertBookingForClient({
   slotEnd: Date;
   clientPhone: string;
   clientName: string;
+  status: BookableStatus;
+  holdExpiresAt: Date | null;
 }): Promise<CreateBookingResult> {
   const overlapping = await prisma.booking.findFirst({
     where: {
       staffId,
-      status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      status: { notIn: ["CANCELLED", "NO_SHOW", "DECLINED", "EXPIRED"] },
       slotStart: { lt: slotEnd },
       slotEnd: { gt: slotStart },
     },
@@ -49,7 +88,9 @@ export async function insertBookingForClient({
           serviceId,
           slotStart,
           slotEnd,
-          status: "CONFIRMED",
+          status,
+          holdExpiresAt,
+          respondedAt: status === "CONFIRMED" ? new Date() : null,
         },
       });
     });
@@ -60,5 +101,5 @@ export async function insertBookingForClient({
     throw error;
   }
 
-  return { success: true };
+  return { success: true, status };
 }

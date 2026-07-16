@@ -19,9 +19,17 @@ enum OrganizationType {
 enum BookingStatus {
   PENDING
   CONFIRMED
+  DECLINED
+  EXPIRED
   COMPLETED
   CANCELLED
   NO_SHOW
+}
+
+enum ConfirmationMode {
+  MANUAL
+  AUTO_ALL
+  AUTO_TRUSTED
 }
 
 enum PrepaymentStatus {
@@ -68,6 +76,10 @@ model Staff {
   bio         String?
   avatarUrl   String?
   onboardedAt DateTime?
+
+  // Request-to-book settings.
+  confirmationMode    ConfirmationMode @default(MANUAL)
+  holdDurationMinutes Int              @default(180)
 
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
@@ -134,10 +146,12 @@ model Client {
   updatedAt DateTime @updatedAt
 }
 
-// Overlap prevention (a staff member cannot have two overlapping bookings)
-// must be enforced at the DB transaction level, e.g. via a Postgres
-// exclusion constraint added in a follow-up migration — Prisma's schema
-// language can't express EXCLUDE USING gist directly.
+// Overlap prevention (a staff member cannot have two overlapping bookings,
+// or one overlapping an active PENDING hold) must be enforced at the DB
+// transaction level via a Postgres exclusion constraint added in a
+// follow-up migration — Prisma's schema language can't express
+// EXCLUDE USING gist directly. The constraint excludes CANCELLED, NO_SHOW,
+// DECLINED, and EXPIRED — only PENDING and CONFIRMED block a slot.
 model Booking {
   id        String        @id @default(cuid())
   clientId  String
@@ -149,7 +163,11 @@ model Booking {
   slotStart DateTime
   slotEnd   DateTime
 
-  cancelledAt DateTime?
+  // Set while PENDING; a hold past this time is lazily flipped to EXPIRED.
+  holdExpiresAt DateTime?
+  // When the master confirmed/declined — used for the response-time estimate.
+  respondedAt   DateTime?
+  cancelledAt   DateTime?
 
   client  Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
   staff   Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)

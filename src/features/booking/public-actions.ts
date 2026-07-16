@@ -4,9 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { bookingSchema } from "./schemas";
 import { normalizePhone } from "./phone";
 import { generateSlotsForDate, type WorkingHours } from "./slots";
-import { insertBookingForClient } from "./create-booking";
+import { insertBookingForClient, decideInitialBookingStatus } from "./create-booking";
+import { expireStaleHolds } from "./expiry";
+import { getMedianResponseMinutes } from "./response-time";
+import type { BookableStatus } from "./create-booking";
 
-export type ActionState = { error: string } | { success: true } | undefined;
+export type ActionState =
+  | { error: string }
+  | { success: true; status: BookableStatus; medianResponseMinutes: number | null }
+  | undefined;
 
 export async function getAvailableSlots(
   staffId: string,
@@ -14,6 +20,8 @@ export async function getAvailableSlots(
   dateISO: string,
   excludeBookingId?: string
 ): Promise<{ startISO: string; endISO: string }[]> {
+  await expireStaleHolds(staffId);
+
   const [staff, service] = await Promise.all([
     prisma.staff.findUnique({ where: { id: staffId }, include: { location: true } }),
     prisma.staffService.findUnique({ where: { id: serviceId } }),
@@ -23,7 +31,7 @@ export async function getAvailableSlots(
   const existingBookings = await prisma.booking.findMany({
     where: {
       staffId,
-      status: { notIn: ["CANCELLED", "NO_SHOW"] },
+      status: { notIn: ["CANCELLED", "NO_SHOW", "DECLINED", "EXPIRED"] },
       ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
     },
     select: { slotStart: true, slotEnd: true },
@@ -59,7 +67,10 @@ export async function createBooking(
     return { error: "Некоректний номер телефону" };
   }
 
-  const service = await prisma.staffService.findUnique({ where: { id: serviceId } });
+  const service = await prisma.staffService.findUnique({
+    where: { id: serviceId },
+    include: { staff: true },
+  });
   if (!service) {
     return { error: "Послугу не знайдено" };
   }
@@ -70,12 +81,31 @@ export async function createBooking(
   }
   const slotEnd = new Date(slotStart.getTime() + service.durationMinutes * 60_000);
 
-  return insertBookingForClient({
+  await expireStaleHolds(service.staffId);
+
+  const existingClient = await prisma.client.findUnique({ where: { phone } });
+
+  const { status, holdExpiresAt } = decideInitialBookingStatus({
+    confirmationMode: service.staff.confirmationMode,
+    holdDurationMinutes: service.staff.holdDurationMinutes,
+    clientReliabilityScore: existingClient?.reliabilityScore ?? null,
+  });
+
+  const result = await insertBookingForClient({
     staffId: service.staffId,
     serviceId: service.id,
     slotStart,
     slotEnd,
     clientPhone: phone,
     clientName,
+    status,
+    holdExpiresAt,
   });
+
+  if ("error" in result) return result;
+
+  const medianResponseMinutes =
+    result.status === "PENDING" ? await getMedianResponseMinutes(service.staffId) : null;
+
+  return { success: true, status: result.status, medianResponseMinutes };
 }
