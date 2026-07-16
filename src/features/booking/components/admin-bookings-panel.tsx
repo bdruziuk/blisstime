@@ -14,6 +14,7 @@ import {
   type ActionState,
 } from "@/features/booking/admin-actions";
 import { getAvailableSlots } from "@/features/booking/public-actions";
+import { STATUS_LABELS, formatTime } from "@/features/booking/format";
 
 type BookingItem = {
   id: string;
@@ -34,24 +35,6 @@ type ServiceItem = {
   durationMinutes: number;
   priceCents: number;
 };
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING: "Очікує підтвердження",
-  CONFIRMED: "Підтверджено",
-  DECLINED: "Відхилено",
-  EXPIRED: "Хол минув",
-  COMPLETED: "Завершено",
-  CANCELLED: "Скасовано",
-  NO_SHOW: "Не прийшов",
-};
-
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("uk-UA", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Kyiv",
-  });
-}
 
 function holdMinutesLeft(holdExpiresAtISO: string | null) {
   if (!holdExpiresAtISO) return null;
