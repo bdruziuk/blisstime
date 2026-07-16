@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Sparkles, CalendarDays, Settings, LogOut, LayoutDashboard } from "lucide-react";
+import { Sparkles, CalendarDays, Settings, LogOut, LayoutDashboard, Scissors } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Кабінет", icon: LayoutDashboard },
   { href: "/dashboard/bookings", label: "Записи", icon: CalendarDays },
+  { href: "/dashboard/services", label: "Послуги", icon: Scissors },
   { href: "/dashboard/settings", label: "Налаштування", icon: Settings },
 ];
 
@@ -13,7 +14,7 @@ export async function SiteHeader() {
 
   return (
     <header className="border-border bg-card/70 sticky top-0 z-10 border-b backdrop-blur-md">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
         <Link href="/dashboard" className="font-heading flex items-center gap-1.5 text-lg font-bold">
           <Sparkles className="text-primary size-5" strokeWidth={2.25} />
           BlissTime

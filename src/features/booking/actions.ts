@@ -167,6 +167,42 @@ export async function addService(
   });
 
   revalidatePath("/onboarding/services");
+  revalidatePath("/dashboard/services");
+}
+
+export async function updateService(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const staff = await requireStaff();
+
+  const serviceId = String(formData.get("serviceId") || "");
+  const parsed = serviceSchema.safeParse({
+    categoryId: formData.get("categoryId"),
+    displayName: formData.get("displayName"),
+    price: formData.get("price"),
+    durationMinutes: formData.get("durationMinutes"),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+  const { categoryId, displayName, price, durationMinutes } = parsed.data;
+
+  const result = await prisma.staffService.updateMany({
+    where: { id: serviceId, staffId: staff.id },
+    data: {
+      categoryId,
+      displayName,
+      durationMinutes,
+      priceCents: Math.round(price * 100),
+    },
+  });
+  if (result.count === 0) {
+    return { error: "Послугу не знайдено" };
+  }
+
+  revalidatePath("/onboarding/services");
+  revalidatePath("/dashboard/services");
 }
 
 export async function removeService(serviceId: string) {
@@ -177,6 +213,7 @@ export async function removeService(serviceId: string) {
   });
 
   revalidatePath("/onboarding/services");
+  revalidatePath("/dashboard/services");
 }
 
 export async function goToHoursStep() {
