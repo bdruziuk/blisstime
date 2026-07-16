@@ -13,8 +13,8 @@ export default async function SettingsPage() {
   if (!staff.onboardedAt) redirect("/onboarding/profile");
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-8">
-      <Card className="w-full max-w-md">
+    <main className="mx-auto flex max-w-md flex-col gap-6 px-6 py-10">
+      <Card>
         <CardHeader>
           <CardTitle>Налаштування записів</CardTitle>
         </CardHeader>

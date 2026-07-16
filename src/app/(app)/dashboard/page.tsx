@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -15,22 +16,32 @@ export default async function DashboardPage() {
   if (!staff.onboardedAt) redirect("/onboarding/profile");
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-3xl font-semibold">Привіт, {staff.displayName}!</h1>
-      <Link href={`/@${staff.username}`} className="text-muted-foreground underline">
-        Ваша публічна сторінка: /@{staff.username}
-      </Link>
-      <p className="text-muted-foreground">
-        {staff.location.city}, {staff.location.address}
-      </p>
-      <p className="text-muted-foreground">Послуг додано: {staff.services.length}</p>
-      <div className="flex gap-4">
-        <Link href="/dashboard/bookings" className="underline">
-          Записи
-        </Link>
-        <Link href="/dashboard/settings" className="underline">
-          Налаштування
-        </Link>
+    <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10">
+      <div>
+        <h1 className="font-heading text-3xl font-semibold">Привіт, {staff.displayName}!</h1>
+        <p className="text-muted-foreground mt-1">
+          {staff.location.city}, {staff.location.address}
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-muted-foreground text-sm">Публічна сторінка</p>
+            <Link
+              href={`/@${staff.username}`}
+              className="text-primary mt-1 block font-medium underline underline-offset-4"
+            >
+              /@{staff.username}
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5">
+            <p className="text-muted-foreground text-sm">Послуг додано</p>
+            <p className="mt-1 text-2xl font-semibold">{staff.services.length}</p>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );

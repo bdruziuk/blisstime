@@ -20,19 +20,32 @@ export default async function MasterPublicPage({
 
   if (!staff || !staff.onboardedAt) notFound();
 
+  const initials = staff.displayName
+    .split(" ")
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col gap-6 p-8">
-      <div>
-        <h1 className="text-3xl font-semibold">{staff.displayName}</h1>
-        {staff.bio && <p className="text-muted-foreground mt-1">{staff.bio}</p>}
-        <p className="text-muted-foreground mt-1 text-sm">
-          {staff.location.city}, {staff.location.address}
-        </p>
+    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12">
+      <div className="flex items-center gap-4">
+        <div className="bg-accent text-accent-foreground font-heading flex size-16 shrink-0 items-center justify-center rounded-full text-xl font-semibold">
+          {initials}
+        </div>
+        <div>
+          <h1 className="font-heading text-2xl font-semibold sm:text-3xl">{staff.displayName}</h1>
+          <p className="text-muted-foreground text-sm">
+            {staff.location.city}, {staff.location.address}
+          </p>
+        </div>
       </div>
+
+      {staff.bio && <p className="text-muted-foreground">{staff.bio}</p>}
 
       <Card>
         <CardHeader>
-          <CardTitle>Записатися</CardTitle>
+          <CardTitle className="font-heading">Записатися</CardTitle>
         </CardHeader>
         <CardContent>
           {staff.services.length === 0 ? (
