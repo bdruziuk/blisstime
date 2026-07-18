@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { CheckCircle2, Clock3, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -33,6 +33,17 @@ function formatTime(iso: string) {
   });
 }
 
+function StepLabel({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="bg-primary text-primary-foreground flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold">
+        {n}
+      </span>
+      <p className="text-sm font-semibold">{children}</p>
+    </div>
+  );
+}
+
 export function BookingWidget({
   staffId,
   services,
@@ -61,70 +72,77 @@ export function BookingWidget({
   }, [staffId, selectedServiceId, date]);
 
   if (state && "success" in state) {
-    if (state.status === "PENDING") {
-      return (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-lg font-medium">Заявку надіслано!</p>
-            <p className="text-muted-foreground mt-1 text-sm">
-              {state.medianResponseMinutes
-                ? `Майстер зазвичай підтверджує протягом ${state.medianResponseMinutes} хв.`
-                : "Майстер підтвердить запис найближчим часом."}
-            </p>
-          </CardContent>
-        </Card>
-      );
-    }
+    const isPending = state.status === "PENDING";
+    const Icon = isPending ? Clock3 : CheckCircle2;
     return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <p className="text-lg font-medium">Вас записано!</p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Майстер зв&apos;яжеться з вами за потреби.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center gap-3 py-6 text-center">
+        <div className="bg-accent text-primary flex size-14 items-center justify-center rounded-full">
+          <Icon className="size-7" strokeWidth={2} />
+        </div>
+        <p className="text-lg font-bold">
+          {isPending ? "Заявку надіслано!" : "Вас записано!"}
+        </p>
+        <p className="text-muted-foreground max-w-xs text-sm">
+          {isPending
+            ? state.medianResponseMinutes
+              ? `Майстер зазвичай підтверджує протягом ${state.medianResponseMinutes} хв.`
+              : "Майстер підтвердить запис найближчим часом."
+            : "Майстер зв'яжеться з вами за потреби."}
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        {services.map((service) => (
-          <button
-            key={service.id}
-            type="button"
-            onClick={() => setSelectedServiceId(service.id)}
-            className={`rounded-md border px-4 py-3 text-left text-sm transition-colors ${
-              selectedServiceId === service.id
-                ? "border-primary bg-accent"
-                : "border-input hover:bg-accent/50"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <span className="font-medium">{service.displayName}</span>
-              <span>{(service.priceCents / 100).toFixed(0)} грн</span>
-            </div>
-            <div className="text-muted-foreground text-xs">
-              {service.categoryName} · {service.durationMinutes} хв
-            </div>
-          </button>
-        ))}
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <StepLabel n={1}>Оберіть послугу</StepLabel>
+        <div className="flex flex-col gap-2">
+          {services.map((service) => {
+            const selected = selectedServiceId === service.id;
+            return (
+              <button
+                key={service.id}
+                type="button"
+                onClick={() => setSelectedServiceId(service.id)}
+                className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-all ${
+                  selected
+                    ? "border-primary bg-accent shadow-sm"
+                    : "border-border hover:border-primary/40 hover:bg-accent/40"
+                }`}
+              >
+                <div>
+                  <div className="font-semibold">{service.displayName}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {service.categoryName} · {service.durationMinutes} хв
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-primary font-bold">
+                    {(service.priceCents / 100).toFixed(0)} грн
+                  </span>
+                  {selected && (
+                    <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full">
+                      <Check className="size-3.5" strokeWidth={3} />
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {selectedServiceId && (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="booking-date">Дата</Label>
-            <Input
-              id="booking-date"
-              type="date"
-              value={date}
-              min={todayISO()}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-48"
-            />
-          </div>
+        <div className="flex flex-col gap-3 border-t pt-5">
+          <StepLabel n={2}>Оберіть дату і час</StepLabel>
+          <Input
+            type="date"
+            value={date}
+            min={todayISO()}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-48"
+          />
 
           {loadingSlots && <p className="text-muted-foreground text-sm">Завантаження...</p>}
 
@@ -139,10 +157,10 @@ export function BookingWidget({
                   key={slot.startISO}
                   type="button"
                   onClick={() => setSelectedSlot(slot)}
-                  className={`rounded-md border px-3 py-1.5 text-sm ${
+                  className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all ${
                     selectedSlot?.startISO === slot.startISO
-                      ? "border-primary bg-accent"
-                      : "border-input hover:bg-accent/50"
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border hover:border-primary/40 hover:bg-accent/40"
                   }`}
                 >
                   {formatTime(slot.startISO)}
@@ -154,30 +172,37 @@ export function BookingWidget({
       )}
 
       {selectedSlot && selectedServiceId && (
-        <form action={formAction} className="flex flex-col gap-3 border-t pt-4">
-          <input type="hidden" name="serviceId" value={selectedServiceId} />
-          <input type="hidden" name="slotStartISO" value={selectedSlot.startISO} />
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="clientName">Ваше ім&apos;я</Label>
-            <Input id="clientName" name="clientName" required />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="clientPhone">Телефон</Label>
-            <Input
-              id="clientPhone"
-              name="clientPhone"
-              type="tel"
-              placeholder="+380501234567"
-              required
-            />
-          </div>
-          {state && "error" in state && (
-            <p className="text-sm text-destructive">{state.error}</p>
-          )}
-          <Button type="submit" disabled={pending}>
-            {pending ? "Записуємо..." : "Підтвердити запис"}
-          </Button>
-        </form>
+        <div className="flex flex-col gap-3 border-t pt-5">
+          <StepLabel n={3}>Ваші контакти</StepLabel>
+          <form action={formAction} className="flex flex-col gap-3">
+            <input type="hidden" name="serviceId" value={selectedServiceId} />
+            <input type="hidden" name="slotStartISO" value={selectedSlot.startISO} />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="clientName">Ваше ім&apos;я</Label>
+              <Input id="clientName" name="clientName" required />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="clientPhone">Телефон</Label>
+              <Input
+                id="clientPhone"
+                name="clientPhone"
+                type="tel"
+                placeholder="+380501234567"
+                required
+              />
+            </div>
+            {state && "error" in state && (
+              <p className="text-sm text-destructive">{state.error}</p>
+            )}
+            <Button
+              type="submit"
+              disabled={pending}
+              className="h-11 gap-2 rounded-full bg-gradient-to-b from-primary to-primary/85 text-base font-semibold shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/35 active:translate-y-0"
+            >
+              {pending ? "Записуємо..." : "Підтвердити запис"}
+            </Button>
+          </form>
+        </div>
       )}
     </div>
   );

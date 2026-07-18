@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MapPin, CalendarCheck } from "lucide-react";
+import { MapPin, CalendarCheck, Sparkles } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookingWidget } from "@/features/booking/components/booking-widget";
@@ -28,47 +28,73 @@ export default async function MasterPublicPage({
     .join("")
     .toUpperCase();
 
+  const categoryNames = [...new Set(staff.services.map((s) => s.category.name))];
+
   return (
-    <main className="mx-auto flex max-w-2xl flex-col gap-8 px-6 py-12">
-      <div className="flex items-center gap-4">
-        <div className="bg-accent text-accent-foreground font-heading flex size-16 shrink-0 items-center justify-center rounded-2xl text-xl font-bold">
-          {initials}
+    <main className="relative flex flex-col">
+      <div
+        aria-hidden
+        className="from-accent/70 via-background to-background pointer-events-none absolute inset-0 h-72 bg-gradient-to-b"
+      />
+
+      <div className="relative mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-12">
+        <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
+          <div className="bg-primary text-primary-foreground font-heading ring-background flex size-20 shrink-0 items-center justify-center rounded-3xl text-2xl font-bold shadow-lg ring-4">
+            {initials}
+          </div>
+          <div className="flex flex-col items-center gap-2 sm:items-start">
+            <h1 className="font-heading text-3xl font-bold sm:text-4xl">{staff.displayName}</h1>
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
+              <MapPin className="size-4" />
+              {staff.location.city}, {staff.location.address}
+            </p>
+            {categoryNames.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-1.5 sm:justify-start">
+                {categoryNames.map((name) => (
+                  <span
+                    key={name}
+                    className="bg-accent text-accent-foreground inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                  >
+                    <Sparkles className="size-3" />
+                    {name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-        <div>
-          <h1 className="font-heading text-2xl font-bold sm:text-3xl">{staff.displayName}</h1>
-          <p className="text-muted-foreground mt-1 flex items-center gap-1.5 text-sm">
-            <MapPin className="size-4" />
-            {staff.location.city}, {staff.location.address}
+
+        {staff.bio && (
+          <p className="border-primary/30 text-muted-foreground border-l-2 pl-4 italic">
+            {staff.bio}
           </p>
-        </div>
+        )}
+
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CalendarCheck className="text-primary size-5" />
+              Записатися
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {staff.services.length === 0 ? (
+              <p className="text-muted-foreground text-sm">Послуги ще не додано.</p>
+            ) : (
+              <BookingWidget
+                staffId={staff.id}
+                services={staff.services.map((s) => ({
+                  id: s.id,
+                  displayName: s.displayName,
+                  priceCents: s.priceCents,
+                  durationMinutes: s.durationMinutes,
+                  categoryName: s.category.name,
+                }))}
+              />
+            )}
+          </CardContent>
+        </Card>
       </div>
-
-      {staff.bio && <p className="text-muted-foreground">{staff.bio}</p>}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-heading">
-            <CalendarCheck className="text-primary size-5" />
-            Записатися
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {staff.services.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Послуги ще не додано.</p>
-          ) : (
-            <BookingWidget
-              staffId={staff.id}
-              services={staff.services.map((s) => ({
-                id: s.id,
-                displayName: s.displayName,
-                priceCents: s.priceCents,
-                durationMinutes: s.durationMinutes,
-                categoryName: s.category.name,
-              }))}
-            />
-          )}
-        </CardContent>
-      </Card>
     </main>
   );
 }
