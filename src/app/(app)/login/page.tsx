@@ -5,14 +5,21 @@ import { LoginForm } from "@/features/booking/components/login-form";
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
-      <Link href="/" className="font-heading flex items-center gap-1.5 text-2xl font-bold">
+    <main className="relative flex min-h-screen flex-col items-center justify-center gap-6 overflow-hidden p-8">
+      <div
+        aria-hidden
+        className="from-accent/60 via-background to-background pointer-events-none absolute inset-0 bg-gradient-to-b"
+      />
+      <Link
+        href="/"
+        className="font-heading relative flex items-center gap-1.5 text-2xl font-bold"
+      >
         <Sparkles className="text-primary size-6" strokeWidth={2.25} />
         BlissTime
       </Link>
-      <Card className="w-full max-w-sm">
+      <Card className="relative w-full max-w-sm shadow-lg">
         <CardHeader>
-          <CardTitle>Вхід</CardTitle>
+          <CardTitle className="text-xl">Вхід</CardTitle>
         </CardHeader>
         <CardContent>
           <LoginForm />

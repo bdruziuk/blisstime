@@ -29,13 +29,17 @@ export function RegisterForm() {
           <Input id="password" name="password" type="password" required minLength={8} />
         </div>
         {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
-        <Button type="submit" disabled={pending}>
+        <Button
+          type="submit"
+          disabled={pending}
+          className="h-11 rounded-full bg-gradient-to-b from-primary to-primary/85 text-base font-semibold shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/35 active:translate-y-0"
+        >
           {pending ? "Реєстрація..." : "Зареєструватися"}
         </Button>
       </form>
       <p className="mt-4 text-sm text-muted-foreground">
         Вже маєте акаунт?{" "}
-        <Link href="/login" className="underline">
+        <Link href="/login" className="text-primary font-semibold hover:underline">
           Увійти
         </Link>
       </p>

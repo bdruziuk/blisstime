@@ -25,13 +25,17 @@ export function LoginForm() {
           <Input id="password" name="password" type="password" required />
         </div>
         {state?.error && <p className="text-sm text-destructive">{state.error}</p>}
-        <Button type="submit" disabled={pending}>
+        <Button
+          type="submit"
+          disabled={pending}
+          className="h-11 rounded-full bg-gradient-to-b from-primary to-primary/85 text-base font-semibold shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/35 active:translate-y-0"
+        >
           {pending ? "Вхід..." : "Увійти"}
         </Button>
       </form>
       <p className="mt-4 text-sm text-muted-foreground">
         Ще немає акаунту?{" "}
-        <Link href="/register" className="underline">
+        <Link href="/register" className="text-primary font-semibold hover:underline">
           Зареєструватися
         </Link>
       </p>
