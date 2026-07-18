@@ -47,17 +47,17 @@ export default function HomePage() {
               render={<Link href="/register" />}
               nativeButton={false}
               size="lg"
-              className="h-11 gap-2 rounded-full px-6 text-base"
+              className="group h-12 gap-2 rounded-full bg-gradient-to-b from-primary to-primary/85 px-7 text-base font-semibold shadow-lg shadow-primary/25 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/35 active:translate-y-0"
             >
               Створити кабінет майстра
-              <ArrowRight className="size-4" />
+              <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
             </Button>
             <Button
               render={<Link href="/login" />}
               nativeButton={false}
               size="lg"
               variant="outline"
-              className="h-11 rounded-full px-6 text-base"
+              className="h-12 rounded-full border-2 px-7 text-base font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:border-primary hover:text-primary hover:shadow-md active:translate-y-0"
             >
               Увійти
             </Button>
