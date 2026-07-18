@@ -12,6 +12,7 @@ export type ParsePriceListResult =
 
 const FALLBACK_CATEGORY_SLUG = "misc.other";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_IMAGES = 5;
 
 async function requireStaffForImport() {
   const session = await auth();
@@ -24,7 +25,7 @@ async function requireStaffForImport() {
 }
 
 function buildSystemPrompt(categoryListForPrompt: string) {
-  return `Ти розпізнаєш прайс-лист б'юті-майстра (текст або фото) і перетворюєш його у структурований список послуг.
+  return `Ти розпізнаєш прайс-лист б'юті-майстра (текст або одне чи декілька фото) і перетворюєш його у структурований список послуг. Якщо фото декілька — обʼєднай усі позиції з усіх фото в один список, без дублікатів.
 
 Для кожної позиції визнач:
 - displayName: назва послуги українською
@@ -114,22 +115,39 @@ export async function parsePriceList(rawText: string): Promise<ParsePriceListRes
 export async function parsePriceListFromImage(formData: FormData): Promise<ParsePriceListResult> {
   await requireStaffForImport();
 
-  const file = formData.get("image");
-  if (!(file instanceof File) || file.size === 0) {
-    return { error: "Виберіть зображення" };
+  const files = formData.getAll("image").filter((f): f is File => f instanceof File && f.size > 0);
+
+  if (files.length === 0) {
+    return { error: "Виберіть хоча б одне зображення" };
   }
-  if (!file.type.startsWith("image/")) {
-    return { error: "Файл має бути зображенням" };
+  if (files.length > MAX_IMAGES) {
+    return { error: `Максимум ${MAX_IMAGES} зображень за раз` };
   }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return { error: "Зображення завелике (максимум 8 МБ)" };
+  for (const file of files) {
+    if (!file.type.startsWith("image/")) {
+      return { error: "Усі файли мають бути зображеннями" };
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      return { error: "Одне із зображень завелике (максимум 8 МБ)" };
+    }
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
+  const imageParts: OpenAI.Chat.Completions.ChatCompletionContentPart[] = await Promise.all(
+    files.map(async (file) => {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const dataUrl = `data:${file.type};base64,${buffer.toString("base64")}`;
+      return { type: "image_url" as const, image_url: { url: dataUrl } };
+    })
+  );
 
   return runPriceListExtraction([
-    { type: "text", text: "Розпізнай прайс-лист на цьому зображенні." },
-    { type: "image_url", image_url: { url: dataUrl } },
+    {
+      type: "text",
+      text:
+        files.length > 1
+          ? "Розпізнай прайс-лист на цих фото і обʼєднай усі позиції в один список."
+          : "Розпізнай прайс-лист на цьому зображенні.",
+    },
+    ...imageParts,
   ]);
 }

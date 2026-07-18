@@ -19,6 +19,7 @@ type ParsedItem = {
 type Mode = "text" | "image";
 
 const FALLBACK_SLUG = "misc.other";
+const MAX_IMAGES = 5;
 
 function ParsedItemRow({
   item,
@@ -104,17 +105,27 @@ export function AiImportPanel({ categories }: { categories: Category[] }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("text");
   const [text, setText] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [images, setImages] = useState<{ file: File; url: string }[]>([]);
   const [items, setItems] = useState<ParsedItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
 
-  function handleSelectImage(file: File | null) {
-    setImageFile(file);
-    setImagePreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return file ? URL.createObjectURL(file) : null;
+  function handleAddImages(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setImages((prev) => {
+      const room = MAX_IMAGES - prev.length;
+      const next = Array.from(files)
+        .slice(0, room)
+        .map((file) => ({ file, url: URL.createObjectURL(file) }));
+      return [...prev, ...next];
+    });
+  }
+
+  function handleRemoveImage(index: number) {
+    setImages((prev) => {
+      const target = prev[index];
+      if (target) URL.revokeObjectURL(target.url);
+      return prev.filter((_, i) => i !== index);
     });
   }
 
@@ -132,11 +143,13 @@ export function AiImportPanel({ categories }: { categories: Category[] }) {
   }
 
   async function handleParseImage() {
-    if (!imageFile) return;
+    if (images.length === 0) return;
     setParsing(true);
     setError(null);
     const formData = new FormData();
-    formData.set("image", imageFile);
+    for (const { file } of images) {
+      formData.append("image", file);
+    }
     const result = await parsePriceListFromImage(formData);
     setParsing(false);
     if ("error" in result) {
@@ -200,38 +213,49 @@ export function AiImportPanel({ categories }: { categories: Category[] }) {
           </>
         ) : (
           <>
-            <Label htmlFor="price-list-image">Завантаж фото прайсу</Label>
-            {imagePreviewUrl ? (
-              <div className="relative w-fit">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={imagePreviewUrl}
-                  alt="Прайс"
-                  className="max-h-64 rounded-md border object-contain"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSelectImage(null)}
-                  className="bg-background absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full border shadow-sm"
+            <Label htmlFor="price-list-image">
+              Завантаж фото прайсу {images.length > 0 && `(${images.length}/${MAX_IMAGES})`}
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {images.map((img, i) => (
+                <div key={img.url} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.url}
+                    alt={`Прайс ${i + 1}`}
+                    className="size-24 rounded-md border object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(i)}
+                    className="bg-background absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full border shadow-sm"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </div>
+              ))}
+              {images.length < MAX_IMAGES && (
+                <label
+                  htmlFor="price-list-image"
+                  className="border-border hover:border-primary/40 hover:bg-accent/40 flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed text-xs"
                 >
-                  <X className="size-3.5" />
-                </button>
-              </div>
-            ) : (
-              <label
-                htmlFor="price-list-image"
-                className="border-border hover:border-primary/40 hover:bg-accent/40 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed p-8 text-sm"
-              >
-                <Upload className="text-muted-foreground size-6" />
-                <span className="text-muted-foreground">Натисни, щоб обрати фото</span>
-              </label>
-            )}
+                  <Upload className="text-muted-foreground size-5" />
+                  <span className="text-muted-foreground">
+                    {images.length === 0 ? "Обрати фото" : "Додати ще"}
+                  </span>
+                </label>
+              )}
+            </div>
             <input
               id="price-list-image"
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
-              onChange={(e) => handleSelectImage(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                handleAddImages(e.target.files);
+                e.target.value = "";
+              }}
             />
           </>
         )}
@@ -243,7 +267,7 @@ export function AiImportPanel({ categories }: { categories: Category[] }) {
               {parsing ? "Розпізнаємо..." : "Розпізнати"}
             </Button>
           ) : (
-            <Button type="button" onClick={handleParseImage} disabled={parsing || !imageFile}>
+            <Button type="button" onClick={handleParseImage} disabled={parsing || images.length === 0}>
               {parsing ? "Розпізнаємо..." : "Розпізнати"}
             </Button>
           )}
