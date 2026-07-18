@@ -1,4 +1,4 @@
-# CLAUDE.md — EasyService (робоча назва)
+# CLAUDE.md — BlissTime (робоча назва)
 
 ## Що це за проект
 
