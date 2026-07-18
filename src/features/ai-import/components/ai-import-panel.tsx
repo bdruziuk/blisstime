@@ -1,12 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { Sparkles, Type, Image as ImageIcon, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { addService, type ActionState } from "@/features/booking/actions";
-import { parsePriceList } from "@/features/ai-import/parse-price-list";
+import { parsePriceList, parsePriceListFromImage } from "@/features/ai-import/parse-price-list";
 
 type Category = { id: string; slug: string; name: string; parentName: string };
 type ParsedItem = {
@@ -15,6 +16,7 @@ type ParsedItem = {
   durationMinutes: number;
   categorySlug: string;
 };
+type Mode = "text" | "image";
 
 const FALLBACK_SLUG = "misc.other";
 
@@ -100,12 +102,23 @@ function ParsedItemRow({
 
 export function AiImportPanel({ categories }: { categories: Category[] }) {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<Mode>("text");
   const [text, setText] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [items, setItems] = useState<ParsedItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [parsing, setParsing] = useState(false);
 
-  async function handleParse() {
+  function handleSelectImage(file: File | null) {
+    setImageFile(file);
+    setImagePreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  }
+
+  async function handleParseText() {
     setParsing(true);
     setError(null);
     const result = await parsePriceList(text);
@@ -118,10 +131,27 @@ export function AiImportPanel({ categories }: { categories: Category[] }) {
     setItems(result.items);
   }
 
+  async function handleParseImage() {
+    if (!imageFile) return;
+    setParsing(true);
+    setError(null);
+    const formData = new FormData();
+    formData.set("image", imageFile);
+    const result = await parsePriceListFromImage(formData);
+    setParsing(false);
+    if ("error" in result) {
+      setError(result.error);
+      setItems(null);
+      return;
+    }
+    setItems(result.items);
+  }
+
   if (!open) {
     return (
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        Імпортувати прайс з тексту (AI)
+      <Button variant="secondary" className="gap-2" onClick={() => setOpen(true)}>
+        <Sparkles className="size-4" />
+        Імпортувати прайс (AI)
       </Button>
     );
   }
@@ -129,20 +159,94 @@ export function AiImportPanel({ categories }: { categories: Category[] }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 p-4">
-        <Label htmlFor="price-list-text">Встав текст прайсу</Label>
-        <textarea
-          id="price-list-text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={6}
-          placeholder={"Манікюр гель-лак - 800 грн, 1.5 год\nПедикюр класичний - 600 грн"}
-          className="border-input w-full rounded-md border bg-transparent p-2 text-sm shadow-xs"
-        />
+        <div className="border-border inline-flex w-fit gap-1 rounded-md border p-1 text-sm">
+          <button
+            type="button"
+            onClick={() => setMode("text")}
+            className={`flex items-center gap-1.5 rounded px-3 py-1 ${
+              mode === "text"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Type className="size-3.5" />
+            Текст
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("image")}
+            className={`flex items-center gap-1.5 rounded px-3 py-1 ${
+              mode === "image"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ImageIcon className="size-3.5" />
+            Фото
+          </button>
+        </div>
+
+        {mode === "text" ? (
+          <>
+            <Label htmlFor="price-list-text">Встав текст прайсу</Label>
+            <textarea
+              id="price-list-text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={6}
+              placeholder={"Манікюр гель-лак - 800 грн, 1.5 год\nПедикюр класичний - 600 грн"}
+              className="border-input w-full rounded-md border bg-transparent p-2 text-sm shadow-xs"
+            />
+          </>
+        ) : (
+          <>
+            <Label htmlFor="price-list-image">Завантаж фото прайсу</Label>
+            {imagePreviewUrl ? (
+              <div className="relative w-fit">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imagePreviewUrl}
+                  alt="Прайс"
+                  className="max-h-64 rounded-md border object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSelectImage(null)}
+                  className="bg-background absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full border shadow-sm"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            ) : (
+              <label
+                htmlFor="price-list-image"
+                className="border-border hover:border-primary/40 hover:bg-accent/40 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed p-8 text-sm"
+              >
+                <Upload className="text-muted-foreground size-6" />
+                <span className="text-muted-foreground">Натисни, щоб обрати фото</span>
+              </label>
+            )}
+            <input
+              id="price-list-image"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleSelectImage(e.target.files?.[0] ?? null)}
+            />
+          </>
+        )}
+
         {error && <p className="text-destructive text-sm">{error}</p>}
         <div className="flex gap-2">
-          <Button type="button" onClick={handleParse} disabled={parsing || !text.trim()}>
-            {parsing ? "Розпізнаємо..." : "Розпізнати"}
-          </Button>
+          {mode === "text" ? (
+            <Button type="button" onClick={handleParseText} disabled={parsing || !text.trim()}>
+              {parsing ? "Розпізнаємо..." : "Розпізнати"}
+            </Button>
+          ) : (
+            <Button type="button" onClick={handleParseImage} disabled={parsing || !imageFile}>
+              {parsing ? "Розпізнаємо..." : "Розпізнати"}
+            </Button>
+          )}
           <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
             Закрити
           </Button>
