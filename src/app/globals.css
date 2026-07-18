@@ -128,6 +128,16 @@
   html {
     @apply font-sans;
   }
+  /* Windows Chrome renders the <select> dropdown popup as a native OS
+     widget that ignores inherited font-family unless set explicitly,
+     falling back to Times New Roman. */
+  select,
+  option,
+  input,
+  textarea,
+  button {
+    font-family: inherit;
+  }
   h1,
   h2,
   h3,
