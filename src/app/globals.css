@@ -122,11 +122,12 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* next/font's --font-body variable is set via a class on <body>, so
+     font-family must be applied there (or lower) — applying it on <html>
+     (an ancestor of body) can't see a variable body itself defines, and
+     silently falls back to the browser's serif default. */
   body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
+    @apply bg-background text-foreground font-sans;
   }
   /* Windows Chrome renders the <select> dropdown popup as a native OS
      widget that ignores inherited font-family unless set explicitly,
