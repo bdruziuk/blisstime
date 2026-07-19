@@ -27,7 +27,7 @@ const VIEWS: BookingsView[] = ["list", "day", "week", "month"];
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string; view?: string }>;
+  searchParams: Promise<{ date?: string; view?: string; cursor?: string; dir?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
@@ -38,7 +38,7 @@ export default async function BookingsPage({
 
   await expireStaleHolds(staff.id);
 
-  const { date, view } = await searchParams;
+  const { date, view, cursor, dir } = await searchParams;
   const todayISO = todayISOInBusinessTz();
   const dateISO = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : todayISO;
   const viewMode: BookingsView = VIEWS.includes(view as BookingsView)
@@ -52,7 +52,13 @@ export default async function BookingsPage({
         <BookingsViewSwitcher current={viewMode} dateISO={dateISO} />
       </div>
 
-      {viewMode === "list" && <BookingsListContent staffId={staff.id} todayISO={todayISO} />}
+      {viewMode === "list" && (
+        <BookingsListContent
+          staffId={staff.id}
+          cursor={cursor}
+          dir={dir === "prev" ? "prev" : dir === "next" ? "next" : undefined}
+        />
+      )}
 
       {viewMode === "day" && (
         <BookingsDayContent staffId={staff.id} dateISO={dateISO} />
@@ -67,14 +73,49 @@ export default async function BookingsPage({
   );
 }
 
-async function BookingsListContent({ staffId, todayISO }: { staffId: string; todayISO: string }) {
-  const { start } = getDayBoundsUTC(todayISO);
-  const bookings = await prisma.booking.findMany({
-    where: { staffId, slotStart: { gte: start } },
-    include: { client: true, service: true },
-    orderBy: { slotStart: "asc" },
-    take: 100,
-  });
+const LIST_PAGE_SIZE = 10;
+
+async function BookingsListContent({
+  staffId,
+  cursor,
+  dir,
+}: {
+  staffId: string;
+  cursor?: string;
+  dir?: "next" | "prev";
+}) {
+  const cursorDate = cursor ? new Date(cursor) : null;
+  const validCursor = cursorDate && !Number.isNaN(cursorDate.getTime()) ? cursorDate : null;
+
+  let bookings;
+  if (!validCursor) {
+    bookings = await prisma.booking.findMany({
+      where: { staffId, slotStart: { gte: new Date() } },
+      include: { client: true, service: true },
+      orderBy: { slotStart: "asc" },
+      take: LIST_PAGE_SIZE,
+    });
+  } else if (dir === "prev") {
+    const rows = await prisma.booking.findMany({
+      where: { staffId, slotStart: { lt: validCursor } },
+      include: { client: true, service: true },
+      orderBy: { slotStart: "desc" },
+      take: LIST_PAGE_SIZE,
+    });
+    bookings = rows.reverse();
+  } else {
+    bookings = await prisma.booking.findMany({
+      where: { staffId, slotStart: { gt: validCursor } },
+      include: { client: true, service: true },
+      orderBy: { slotStart: "asc" },
+      take: LIST_PAGE_SIZE,
+    });
+  }
+
+  const hasNext = dir === "prev" ? true : bookings.length === LIST_PAGE_SIZE;
+  const hasPrev = !validCursor ? true : dir === "next" ? true : bookings.length === LIST_PAGE_SIZE;
+  const nextCursor = bookings.at(-1)?.slotStart.toISOString();
+  const prevCursor = bookings.at(0)?.slotStart.toISOString();
 
   const groups = new Map<string, typeof bookings>();
   for (const b of bookings) {
@@ -84,19 +125,44 @@ async function BookingsListContent({ staffId, todayISO }: { staffId: string; tod
   }
 
   return (
-    <BookingsListView
-      bookingsByDate={[...groups.entries()].map(([dateISO, group]) => ({
-        dateISO,
-        bookings: group.map((b) => ({
-          id: b.id,
-          status: b.status,
-          slotStartISO: b.slotStart.toISOString(),
-          slotEndISO: b.slotEnd.toISOString(),
-          clientName: b.client.name ?? b.client.phone,
-          serviceName: b.service.displayName,
-        })),
-      }))}
-    />
+    <div className="flex flex-col gap-4">
+      <BookingsListView
+        bookingsByDate={[...groups.entries()].map(([dateISO, group]) => ({
+          dateISO,
+          bookings: group.map((b) => ({
+            id: b.id,
+            status: b.status,
+            slotStartISO: b.slotStart.toISOString(),
+            slotEndISO: b.slotEnd.toISOString(),
+            clientName: b.client.name ?? b.client.phone,
+            serviceName: b.service.displayName,
+          })),
+        }))}
+      />
+
+      <div className="flex items-center justify-between border-t pt-4 text-sm">
+        {hasPrev && prevCursor ? (
+          <Link
+            href={`/dashboard/bookings?view=list&cursor=${encodeURIComponent(prevCursor)}&dir=prev`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            ← Попередні
+          </Link>
+        ) : (
+          <span />
+        )}
+        {hasNext && nextCursor ? (
+          <Link
+            href={`/dashboard/bookings?view=list&cursor=${encodeURIComponent(nextCursor)}&dir=next`}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Наступні →
+          </Link>
+        ) : (
+          <span />
+        )}
+      </div>
+    </div>
   );
 }
 
