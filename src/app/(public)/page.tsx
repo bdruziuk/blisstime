@@ -1,25 +1,7 @@
 import Link from "next/link";
-import { Zap, Search, Heart, Sparkles, ArrowRight } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-
-const FEATURES = [
-  {
-    icon: Zap,
-    title: "Запис за 10 секунд",
-    body: "Клієнтка бронює послугу у браузері з лінка в Instagram — без застосунку, без реєстрації, без переписки в Direct.",
-  },
-  {
-    icon: Search,
-    title: "Клієнти з Google — безкоштовно",
-    body: "Ваша сторінка потрапляє в каталог і індексується пошуковими системами. Платите за кабінет — трафік з Google отримуєте безкоштовно.",
-  },
-  {
-    icon: Heart,
-    title: "Ті, що були — повертаються",
-    body: "Нагадування, рейтинг надійності клієнтів і керування розкладом заощаджують ваш час і рятують дохід від no-show.",
-  },
-];
+import { WhyUs } from "@/features/landing/components/WhyUs";
 
 export default function HomePage() {
   return (
@@ -65,21 +47,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-border border-t">
-        <div className="mx-auto grid max-w-4xl gap-5 px-6 py-16 sm:grid-cols-3">
-          {FEATURES.map((f) => (
-            <Card key={f.title} className="card-hover">
-              <CardContent className="flex flex-col gap-3">
-                <div className="bg-accent text-accent-foreground flex size-10 items-center justify-center rounded-lg">
-                  <f.icon className="size-5" strokeWidth={2.25} />
-                </div>
-                <h2 className="font-heading text-base font-bold">{f.title}</h2>
-                <p className="text-muted-foreground text-sm">{f.body}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
+      <WhyUs />
     </main>
   );
 }
