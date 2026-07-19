@@ -9,6 +9,8 @@ export type WorkingHours = Partial<Record<Day, DayHours>>;
 
 export type BookedRange = { slotStart: Date; slotEnd: Date };
 
+export type BlockedRange = { start: Date; end: Date };
+
 export type Slot = { start: Date; end: Date };
 
 function dayKeyInTimezone(date: Date, timezone: string): Day {
@@ -38,6 +40,7 @@ export function generateSlotsForDate({
   workingHours,
   durationMinutes,
   existingBookings,
+  blockedRanges = [],
   now = new Date(),
   timezone = BUSINESS_TIMEZONE,
 }: {
@@ -45,6 +48,8 @@ export function generateSlotsForDate({
   workingHours: WorkingHours;
   durationMinutes: number;
   existingBookings: BookedRange[];
+  /** Master-defined days off / breaks — slots overlapping these are excluded. */
+  blockedRanges?: BlockedRange[];
   now?: Date;
   timezone?: string;
 }): Slot[] {
@@ -70,6 +75,11 @@ export function generateSlotsForDate({
       (b) => slotStart < b.slotEnd && slotEnd > b.slotStart
     );
     if (overlaps) continue;
+
+    const blocked = blockedRanges.some(
+      (b) => slotStart < b.end && slotEnd > b.start
+    );
+    if (blocked) continue;
 
     slots.push({ start: slotStart, end: slotEnd });
   }

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { fromZonedTime } from "date-fns-tz";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { BookingStatus } from "@/generated/prisma/client";
@@ -9,12 +10,14 @@ import { bookingSchema, bookingSettingsSchema } from "./schemas";
 import { normalizePhone } from "./phone";
 import { insertBookingForClient } from "./create-booking";
 import { expireStaleHolds } from "./expiry";
+import { BUSINESS_TIMEZONE, getDayBoundsUTC } from "./slots";
 
 export type ActionState = { error: string } | undefined;
 
 const LATE_CANCELLATION_WINDOW_MS = 3 * 60 * 60 * 1000;
 const LATE_CANCELLATION_SCORE_PENALTY = 10;
 const NOT_BLOCKING_STATUSES: BookingStatus[] = ["CANCELLED", "NO_SHOW", "DECLINED", "EXPIRED"];
+const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 async function requireStaff() {
   const session = await auth();
@@ -136,6 +139,56 @@ export async function createManualBooking(
 
   revalidatePath("/dashboard/bookings");
   return undefined;
+}
+
+export async function addScheduleBlock(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const staff = await requireStaff();
+
+  const date = String(formData.get("date") || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { error: "Оберіть дату" };
+  }
+
+  const wholeDay = formData.get("wholeDay") === "on";
+  const reason = String(formData.get("reason") || "").trim() || null;
+
+  let startsAt: Date;
+  let endsAt: Date;
+
+  if (wholeDay) {
+    ({ start: startsAt, end: endsAt } = getDayBoundsUTC(date));
+  } else {
+    const fromTime = String(formData.get("fromTime") || "");
+    const toTime = String(formData.get("toTime") || "");
+    if (!TIME_REGEX.test(fromTime) || !TIME_REGEX.test(toTime)) {
+      return { error: "Вкажіть час від і до" };
+    }
+    startsAt = fromZonedTime(`${date}T${fromTime}:00`, BUSINESS_TIMEZONE);
+    endsAt = fromZonedTime(`${date}T${toTime}:00`, BUSINESS_TIMEZONE);
+    if (endsAt <= startsAt) {
+      return { error: "Час «до» має бути пізніше за «від»" };
+    }
+  }
+
+  await prisma.scheduleBlock.create({
+    data: { staffId: staff.id, startsAt, endsAt, reason },
+  });
+
+  revalidatePath("/dashboard/settings");
+  return undefined;
+}
+
+export async function removeScheduleBlock(blockId: string) {
+  const staff = await requireStaff();
+
+  await prisma.scheduleBlock.deleteMany({
+    where: { id: blockId, staffId: staff.id },
+  });
+
+  revalidatePath("/dashboard/settings");
 }
 
 export async function updateBookingSettings(

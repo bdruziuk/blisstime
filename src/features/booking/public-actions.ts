@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { bookingSchema } from "./schemas";
 import { normalizePhone } from "./phone";
-import { generateSlotsForDate, type WorkingHours } from "./slots";
+import { generateSlotsForDate, getDayBoundsUTC, type WorkingHours } from "./slots";
 import { insertBookingForClient, decideInitialBookingStatus } from "./create-booking";
 import { expireStaleHolds } from "./expiry";
 import { getMedianResponseMinutes } from "./response-time";
@@ -28,20 +28,29 @@ export async function getAvailableSlots(
   ]);
   if (!staff || !service || service.staffId !== staffId) return [];
 
-  const existingBookings = await prisma.booking.findMany({
-    where: {
-      staffId,
-      status: { notIn: ["CANCELLED", "NO_SHOW", "DECLINED", "EXPIRED"] },
-      ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
-    },
-    select: { slotStart: true, slotEnd: true },
-  });
+  const { start: dayStart, end: dayEnd } = getDayBoundsUTC(dateISO);
+
+  const [existingBookings, blocks] = await Promise.all([
+    prisma.booking.findMany({
+      where: {
+        staffId,
+        status: { notIn: ["CANCELLED", "NO_SHOW", "DECLINED", "EXPIRED"] },
+        ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
+      },
+      select: { slotStart: true, slotEnd: true },
+    }),
+    prisma.scheduleBlock.findMany({
+      where: { staffId, startsAt: { lt: dayEnd }, endsAt: { gt: dayStart } },
+      select: { startsAt: true, endsAt: true },
+    }),
+  ]);
 
   const slots = generateSlotsForDate({
     dateISO,
     workingHours: staff.location.workingHours as WorkingHours,
     durationMinutes: service.durationMinutes,
     existingBookings,
+    blockedRanges: blocks.map((b) => ({ start: b.startsAt, end: b.endsAt })),
   });
 
   return slots.map((s) => ({ startISO: s.start.toISOString(), endISO: s.end.toISOString() }));

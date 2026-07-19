@@ -73,6 +73,13 @@ export async function insertBookingForClient({
     return { error: "Цей час вже зайнято, оберіть інший" };
   }
 
+  const blocked = await prisma.scheduleBlock.findFirst({
+    where: { staffId, startsAt: { lt: slotEnd }, endsAt: { gt: slotStart } },
+  });
+  if (blocked) {
+    return { error: "Цей час недоступний (вихідний або перерва)" };
+  }
+
   try {
     await prisma.$transaction(async (tx) => {
       const client = await tx.client.upsert({

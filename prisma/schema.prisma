@@ -87,6 +87,7 @@ model Staff {
   services        StaffService[]
   bookings        Booking[]
   waitlistEntries WaitlistEntry[]
+  scheduleBlocks  ScheduleBlock[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -206,6 +207,26 @@ model Review {
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+}
+
+// Master-defined time-off (a whole day, or a partial break within a
+// working day) during which no slot is ever offered. Distinct from
+// Booking — nothing is booked, the time is simply excluded from
+// availability. Checked both when generating slots and again right
+// before a booking is inserted (no DB-level constraint across tables).
+model ScheduleBlock {
+  id       String   @id @default(cuid())
+  staffId  String
+  // Always stored in UTC, same convention as Booking.
+  startsAt DateTime
+  endsAt   DateTime
+  reason   String?
+
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([staffId, startsAt])
 }
 
 model WaitlistEntry {

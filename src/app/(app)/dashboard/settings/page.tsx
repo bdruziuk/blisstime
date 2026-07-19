@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "@/features/booking/components/settings-form";
+import { ScheduleBlocksPanel } from "@/features/booking/components/schedule-blocks-panel";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -11,6 +12,11 @@ export default async function SettingsPage() {
   const staff = await prisma.staff.findUnique({ where: { userId: session.user.id } });
   if (!staff) redirect("/register");
   if (!staff.onboardedAt) redirect("/onboarding/profile");
+
+  const blocks = await prisma.scheduleBlock.findMany({
+    where: { staffId: staff.id, endsAt: { gte: new Date() } },
+    orderBy: { startsAt: "asc" },
+  });
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 px-6 py-10">
@@ -22,6 +28,22 @@ export default async function SettingsPage() {
           <SettingsForm
             defaultConfirmationMode={staff.confirmationMode}
             defaultHoldDurationMinutes={staff.holdDurationMinutes}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Вихідні та перерви</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScheduleBlocksPanel
+            blocks={blocks.map((b) => ({
+              id: b.id,
+              startsAtISO: b.startsAt.toISOString(),
+              endsAtISO: b.endsAt.toISOString(),
+              reason: b.reason,
+            }))}
           />
         </CardContent>
       </Card>
