@@ -112,12 +112,17 @@ export function AiImportPanel({ categories }: { categories: Category[] }) {
 
   function handleAddImages(files: FileList | null) {
     if (!files || files.length === 0) return;
+    // Materialize the (live) FileList into plain objects immediately —
+    // don't defer reading it into the setState updater, which can run
+    // after the input's value (and the FileList it backs) has been reset.
+    const selected = Array.from(files).map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
     setImages((prev) => {
       const room = MAX_IMAGES - prev.length;
-      const next = Array.from(files)
-        .slice(0, room)
-        .map((file) => ({ file, url: URL.createObjectURL(file) }));
-      return [...prev, ...next];
+      if (room <= 0) return prev;
+      return [...prev, ...selected.slice(0, room)];
     });
   }
 
