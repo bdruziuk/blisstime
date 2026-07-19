@@ -64,7 +64,9 @@ export default async function BookingsPage({
         <BookingsDayContent staffId={staff.id} dateISO={dateISO} />
       )}
 
-      {viewMode === "week" && <BookingsWeekContent staffId={staff.id} dateISO={dateISO} />}
+      {viewMode === "week" && (
+        <BookingsWeekContent staffId={staff.id} dateISO={dateISO} todayISO={todayISO} />
+      )}
 
       {viewMode === "month" && (
         <BookingsMonthContent staffId={staff.id} dateISO={dateISO} todayISO={todayISO} />
@@ -222,7 +224,15 @@ async function BookingsDayContent({ staffId, dateISO }: { staffId: string; dateI
   );
 }
 
-async function BookingsWeekContent({ staffId, dateISO }: { staffId: string; dateISO: string }) {
+async function BookingsWeekContent({
+  staffId,
+  dateISO,
+  todayISO,
+}: {
+  staffId: string;
+  dateISO: string;
+  todayISO: string;
+}) {
   const weekStartISO = getWeekStartISO(dateISO);
   const weekDates = getWeekDates(weekStartISO);
   const { start, end } = getWeekRangeUTC(weekStartISO);
@@ -268,7 +278,7 @@ async function BookingsWeekContent({ staffId, dateISO }: { staffId: string; date
         </Link>
       </div>
 
-      <BookingsWeekView weekDates={weekDates} bookingsByDate={bookingsByDate} />
+      <BookingsWeekView weekDates={weekDates} bookingsByDate={bookingsByDate} todayISO={todayISO} />
     </div>
   );
 }
