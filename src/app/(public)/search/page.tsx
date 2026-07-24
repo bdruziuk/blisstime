@@ -2,6 +2,7 @@ import { Search as SearchIcon } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { SearchFilters } from "@/features/search/components/search-filters";
 import { MasterListingCard, type MasterListingItem } from "@/features/search/components/master-listing-card";
+import { getRatingStatsForStaff } from "@/features/booking/rating";
 
 type SearchPageParams = {
   category?: string;
@@ -9,6 +10,7 @@ type SearchPageParams = {
   type?: string;
   minPrice?: string;
   maxPrice?: string;
+  minRating?: string;
   sort?: string;
 };
 
@@ -17,7 +19,7 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<SearchPageParams>;
 }) {
-  const { category, city, type, minPrice, maxPrice, sort } = await searchParams;
+  const { category, city, type, minPrice, maxPrice, minRating, sort } = await searchParams;
 
   const [categories, cityRows] = await Promise.all([
     prisma.serviceCategory.findMany({
@@ -57,10 +59,13 @@ export default async function SearchPage({
     },
   });
 
-  const results: (MasterListingItem & { staffId: string })[] = staffRows
+  const ratingStats = await getRatingStatsForStaff(staffRows.map((s) => s.id));
+
+  let results: (MasterListingItem & { staffId: string })[] = staffRows
     .filter((s) => s.services.length > 0)
     .map((s) => {
       const prices = s.services.map((sv) => sv.priceCents);
+      const stats = ratingStats.get(s.id);
       return {
         staffId: s.id,
         username: s.username,
@@ -72,13 +77,22 @@ export default async function SearchPage({
         categoryNames: [...new Set(s.services.map((sv) => sv.category.name))],
         minPriceCents: Math.min(...prices),
         maxPriceCents: Math.max(...prices),
+        avgRating: stats?.avgRating,
+        reviewCount: stats?.reviewCount,
       };
     });
+
+  const minRatingNum = minRating ? Number(minRating) : undefined;
+  if (minRatingNum !== undefined && !Number.isNaN(minRatingNum)) {
+    results = results.filter((r) => (r.avgRating ?? 0) >= minRatingNum);
+  }
 
   if (sort === "price_asc") {
     results.sort((a, b) => a.minPriceCents - b.minPriceCents);
   } else if (sort === "price_desc") {
     results.sort((a, b) => b.minPriceCents - a.minPriceCents);
+  } else if (sort === "rating_desc") {
+    results.sort((a, b) => (b.avgRating ?? 0) - (a.avgRating ?? 0));
   }
 
   return (
@@ -103,6 +117,7 @@ export default async function SearchPage({
           type: type ?? "all",
           minPrice,
           maxPrice,
+          minRating,
           sort: sort ?? "default",
         }}
       />

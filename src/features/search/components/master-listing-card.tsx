@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, ArrowRight } from "lucide-react";
+import { MapPin, ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -13,6 +13,8 @@ export type MasterListingItem = {
   categoryNames: string[];
   minPriceCents: number;
   maxPriceCents: number;
+  avgRating?: number;
+  reviewCount?: number;
 };
 
 const TYPE_LABELS: Record<MasterListingItem["organizationType"], string> = {
@@ -47,6 +49,13 @@ export function MasterListingCard({ item }: { item: MasterListingItem }) {
               <span className="bg-accent text-accent-foreground shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold">
                 {TYPE_LABELS[item.organizationType]}
               </span>
+              {!!item.reviewCount && (
+                <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold">
+                  <Star className="fill-primary text-primary size-3" />
+                  {item.avgRating!.toFixed(1)}
+                  <span className="text-muted-foreground font-normal">({item.reviewCount})</span>
+                </span>
+              )}
             </div>
             <p className="text-muted-foreground flex items-center gap-1 text-xs">
               <MapPin className="size-3.5 shrink-0" />

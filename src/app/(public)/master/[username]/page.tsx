@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin, CalendarCheck, Sparkles, ArrowLeft } from "lucide-react";
+import { MapPin, CalendarCheck, Sparkles, ArrowLeft, Star } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookingWidget } from "@/features/booking/components/booking-widget";
+import { getStaffRatingStats } from "@/features/booking/rating";
 
 export default async function MasterPublicPage({
   params,
@@ -21,6 +22,8 @@ export default async function MasterPublicPage({
   });
 
   if (!staff || !staff.onboardedAt) notFound();
+
+  const ratingStats = await getStaffRatingStats(staff.id);
 
   const initials = staff.displayName
     .split(" ")
@@ -53,6 +56,16 @@ export default async function MasterPublicPage({
           </div>
           <div className="flex flex-col items-center gap-2 sm:items-start">
             <h1 className="font-heading text-3xl font-bold sm:text-4xl">{staff.displayName}</h1>
+            {ratingStats && (
+              <p className="flex items-center gap-1 text-sm font-semibold">
+                <Star className="fill-primary text-primary size-4" />
+                {ratingStats.avgRating.toFixed(1)}
+                <span className="text-muted-foreground font-normal">
+                  ({ratingStats.reviewCount}{" "}
+                  {ratingStats.reviewCount === 1 ? "відгук" : "відгуків"})
+                </span>
+              </p>
+            )}
             <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
               <MapPin className="size-4" />
               {staff.location.city}, {staff.location.address}

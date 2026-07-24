@@ -16,6 +16,7 @@ export type ActionState = { error: string } | undefined;
 
 const LATE_CANCELLATION_WINDOW_MS = 3 * 60 * 60 * 1000;
 const LATE_CANCELLATION_SCORE_PENALTY = 10;
+const NO_SHOW_SCORE_PENALTY = 15;
 const NOT_BLOCKING_STATUSES: BookingStatus[] = ["CANCELLED", "NO_SHOW", "DECLINED", "EXPIRED"];
 const TIME_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -81,6 +82,44 @@ export async function cancelBooking(bookingId: string) {
         },
       });
     }
+  });
+
+  revalidatePath("/dashboard/bookings");
+}
+
+/** Master marks a past confirmed booking as an actual completed visit. */
+export async function markBookingCompleted(bookingId: string) {
+  const staff = await requireStaff();
+
+  await prisma.booking.updateMany({
+    where: { id: bookingId, staffId: staff.id, status: "CONFIRMED" },
+    data: { status: "COMPLETED" },
+  });
+
+  revalidatePath("/dashboard/bookings");
+}
+
+/** Master marks a past confirmed booking as a no-show — dings reliability. */
+export async function markBookingNoShow(bookingId: string) {
+  const staff = await requireStaff();
+
+  const booking = await prisma.booking.findFirst({
+    where: { id: bookingId, staffId: staff.id, status: "CONFIRMED" },
+  });
+  if (!booking) return;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.booking.update({
+      where: { id: booking.id },
+      data: { status: "NO_SHOW" },
+    });
+    await tx.client.update({
+      where: { id: booking.clientId },
+      data: {
+        noShowCount: { increment: 1 },
+        reliabilityScore: { decrement: NO_SHOW_SCORE_PENALTY },
+      },
+    });
   });
 
   revalidatePath("/dashboard/bookings");

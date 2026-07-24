@@ -11,6 +11,8 @@ import {
   declineBooking,
   createManualBooking,
   rescheduleBooking,
+  markBookingCompleted,
+  markBookingNoShow,
   type ActionState,
 } from "@/features/booking/admin-actions";
 import { getAvailableSlots } from "@/features/booking/public-actions";
@@ -145,9 +147,29 @@ function RescheduleForm({
   );
 }
 
+function CopyReviewLinkButton({ bookingId }: { bookingId: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={async () => {
+        const url = `${window.location.origin}/review/${bookingId}`;
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+    >
+      {copied ? "Скопійовано!" : "Посилання для відгуку"}
+    </Button>
+  );
+}
+
 function BookingRow({ staffId, booking }: { staffId: string; booking: BookingItem }) {
   const [rescheduling, setRescheduling] = useState(false);
   const minutesLeft = holdMinutesLeft(booking.holdExpiresAtISO);
+  const isPast = new Date(booking.slotEndISO) < new Date();
 
   return (
     <li className="rounded-md border px-4 py-3 text-sm">
@@ -175,7 +197,17 @@ function BookingRow({ staffId, booking }: { staffId: string; booking: BookingIte
             </Button>
           </div>
         )}
-        {booking.status === "CONFIRMED" && (
+        {booking.status === "CONFIRMED" && isPast && (
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => markBookingCompleted(booking.id)}>
+              Завершити
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => markBookingNoShow(booking.id)}>
+              Не з&apos;явився
+            </Button>
+          </div>
+        )}
+        {booking.status === "CONFIRMED" && !isPast && (
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setRescheduling((v) => !v)}>
               Перенести
@@ -185,6 +217,7 @@ function BookingRow({ staffId, booking }: { staffId: string; booking: BookingIte
             </Button>
           </div>
         )}
+        {booking.status === "COMPLETED" && <CopyReviewLinkButton bookingId={booking.id} />}
       </div>
       {rescheduling && (
         <RescheduleForm

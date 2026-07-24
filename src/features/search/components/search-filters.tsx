@@ -11,12 +11,19 @@ const SORT_OPTIONS = [
   { value: "default", label: "За замовчуванням" },
   { value: "price_asc", label: "Спочатку дешевші" },
   { value: "price_desc", label: "Спочатку дорожчі" },
+  { value: "rating_desc", label: "Спочатку з вищим рейтингом" },
 ];
 
 const TYPE_OPTIONS = [
   { value: "all", label: "Усі" },
   { value: "salon", label: "Тільки салони" },
   { value: "solo", label: "Тільки приватні майстри" },
+];
+
+const RATING_OPTIONS = [
+  { value: "", label: "Будь-який рейтинг" },
+  { value: "4", label: "4+" },
+  { value: "4.5", label: "4.5+" },
 ];
 
 export function SearchFilters({
@@ -32,6 +39,7 @@ export function SearchFilters({
     type: string;
     minPrice?: string;
     maxPrice?: string;
+    minRating?: string;
     sort: string;
   };
 }) {
@@ -109,6 +117,23 @@ export function SearchFilters({
           min={0}
           defaultValue={defaultValues.maxPrice ?? ""}
         />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="filter-rating">Рейтинг</Label>
+        <select
+          id="filter-rating"
+          name="minRating"
+          defaultValue={defaultValues.minRating ?? ""}
+          onChange={() => formRef.current?.requestSubmit()}
+          className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
+        >
+          {RATING_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-col gap-1.5">
