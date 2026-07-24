@@ -44,6 +44,9 @@ export default function HomePage() {
               Увійти
             </Button>
           </div>
+          <Link href="/search" className="text-muted-foreground hover:text-primary text-sm underline underline-offset-4">
+            Шукаєте майстра? Знайти поруч →
+          </Link>
         </div>
       </section>
 

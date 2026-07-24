@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MapPin, CalendarCheck, Sparkles } from "lucide-react";
+import { MapPin, CalendarCheck, Sparkles, ArrowLeft } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookingWidget } from "@/features/booking/components/booking-widget";
@@ -38,6 +39,14 @@ export default async function MasterPublicPage({
       />
 
       <div className="relative mx-auto flex w-full max-w-2xl flex-col gap-8 px-6 py-12">
+        <Link
+          href="/search"
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-sm"
+        >
+          <ArrowLeft className="size-4" />
+          Знайти іншого майстра
+        </Link>
+
         <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
           <div className="bg-primary text-primary-foreground font-heading ring-background flex size-20 shrink-0 items-center justify-center rounded-3xl text-2xl font-bold shadow-lg ring-4">
             {initials}
