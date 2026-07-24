@@ -23,9 +23,46 @@ const TYPE_OPTIONS = [
 
 const RATING_OPTIONS = [
   { value: "", label: "Будь-який рейтинг" },
-  { value: "4", label: "4+" },
-  { value: "4.5", label: "4.5+" },
+  { value: "4", label: "Від 4 зірок" },
+  { value: "4.5", label: "Від 4.5 зірок" },
 ];
+
+function RadioRow({
+  name,
+  value,
+  label,
+  checked,
+  onChange,
+}: {
+  name: string;
+  value: string;
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+}) {
+  return (
+    <label className="hover:bg-accent/60 has-[:checked]:bg-accent has-[:checked]:text-accent-foreground flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors has-[:checked]:font-semibold">
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        defaultChecked={checked}
+        onChange={onChange}
+        className="accent-primary size-3.5"
+      />
+      {label}
+    </label>
+  );
+}
+
+function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{title}</p>
+      {children}
+    </div>
+  );
+}
 
 export function SearchFilters({
   categories,
@@ -45,123 +82,151 @@ export function SearchFilters({
   };
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const submit = () => formRef.current?.requestSubmit();
+
+  const grouped = new Map<string, Category[]>();
+  for (const c of categories) {
+    const list = grouped.get(c.parentName) ?? [];
+    list.push(c);
+    grouped.set(c.parentName, list);
+  }
+
+  const selectedCategory = defaultValues.category ?? "";
+  const selectedRating = defaultValues.minRating ?? "";
 
   return (
-    <form
-      ref={formRef}
-      action="/search"
-      method="GET"
-      className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
-    >
-      <div className="col-span-2 flex flex-col gap-1.5 sm:col-span-1">
-        <Label htmlFor="filter-category">Послуга</Label>
-        <select
-          id="filter-category"
-          name="category"
-          defaultValue={defaultValues.category ?? ""}
-          onChange={() => formRef.current?.requestSubmit()}
-          className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
-        >
-          <option value="">Усі послуги</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.parentName} / {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
+    <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-64">
+      <form
+        ref={formRef}
+        action="/search"
+        method="GET"
+        className="border-border bg-card flex flex-col gap-5 rounded-xl border p-4"
+      >
+        <div className="flex items-center justify-between">
+          <p className="font-heading text-base font-bold">Фільтри</p>
+          <Link
+            href="/search"
+            className="text-muted-foreground hover:text-primary text-xs underline underline-offset-4"
+          >
+            Скинути
+          </Link>
+        </div>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="filter-city">Місто</Label>
-        <Input id="filter-city" name="city" list="filter-cities" defaultValue={defaultValues.city ?? ""} placeholder="Напр. Київ" />
-        <datalist id="filter-cities">
-          {cities.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
-      </div>
+        <FilterGroup title="Послуга">
+          <div className="-mx-1 max-h-64 overflow-y-auto pr-1">
+            <RadioRow
+              name="category"
+              value=""
+              label="Усі послуги"
+              checked={selectedCategory === ""}
+              onChange={submit}
+            />
+            {[...grouped.entries()].map(([parentName, items]) => (
+              <div key={parentName} className="mt-1.5">
+                <p className="text-muted-foreground px-2 pt-1 pb-0.5 text-xs font-medium">
+                  {parentName}
+                </p>
+                {items.map((c) => (
+                  <RadioRow
+                    key={c.id}
+                    name="category"
+                    value={c.id}
+                    label={c.name}
+                    checked={selectedCategory === c.id}
+                    onChange={submit}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        </FilterGroup>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="filter-type">Тип</Label>
-        <select
-          id="filter-type"
-          name="type"
-          defaultValue={defaultValues.type}
-          onChange={() => formRef.current?.requestSubmit()}
-          className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
-        >
-          {TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+        <FilterGroup title="Місто">
+          <Input
+            id="filter-city"
+            name="city"
+            list="filter-cities"
+            defaultValue={defaultValues.city ?? ""}
+            placeholder="Напр. Київ"
+          />
+          <datalist id="filter-cities">
+            {cities.map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
+        </FilterGroup>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="filter-min-price">Від, грн</Label>
-        <Input
-          id="filter-min-price"
-          name="minPrice"
-          type="number"
-          min={0}
-          defaultValue={defaultValues.minPrice ?? ""}
-        />
-      </div>
+        <FilterGroup title="Тип">
+          <div className="-mx-1">
+            {TYPE_OPTIONS.map((opt) => (
+              <RadioRow
+                key={opt.value}
+                name="type"
+                value={opt.value}
+                label={opt.label}
+                checked={defaultValues.type === opt.value}
+                onChange={submit}
+              />
+            ))}
+          </div>
+        </FilterGroup>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="filter-max-price">До, грн</Label>
-        <Input
-          id="filter-max-price"
-          name="maxPrice"
-          type="number"
-          min={0}
-          defaultValue={defaultValues.maxPrice ?? ""}
-        />
-      </div>
+        <FilterGroup title="Ціна, грн">
+          <div className="flex items-center gap-2">
+            <Input
+              id="filter-min-price"
+              name="minPrice"
+              type="number"
+              min={0}
+              placeholder="від"
+              defaultValue={defaultValues.minPrice ?? ""}
+            />
+            <span className="text-muted-foreground">–</span>
+            <Input
+              id="filter-max-price"
+              name="maxPrice"
+              type="number"
+              min={0}
+              placeholder="до"
+              defaultValue={defaultValues.maxPrice ?? ""}
+            />
+          </div>
+        </FilterGroup>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="filter-rating">Рейтинг</Label>
-        <select
-          id="filter-rating"
-          name="minRating"
-          defaultValue={defaultValues.minRating ?? ""}
-          onChange={() => formRef.current?.requestSubmit()}
-          className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
-        >
-          {RATING_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+        <FilterGroup title="Рейтинг">
+          <div className="-mx-1">
+            {RATING_OPTIONS.map((opt) => (
+              <RadioRow
+                key={opt.value}
+                name="minRating"
+                value={opt.value}
+                label={opt.label}
+                checked={selectedRating === opt.value}
+                onChange={submit}
+              />
+            ))}
+          </div>
+        </FilterGroup>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="filter-sort">Сортування</Label>
-        <select
-          id="filter-sort"
-          name="sort"
-          defaultValue={defaultValues.sort}
-          onChange={() => formRef.current?.requestSubmit()}
-          className="border-input flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
-        >
-          {SORT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+        <FilterGroup title="Сортування">
+          <div className="-mx-1">
+            {SORT_OPTIONS.map((opt) => (
+              <RadioRow
+                key={opt.value}
+                name="sort"
+                value={opt.value}
+                label={opt.label}
+                checked={defaultValues.sort === opt.value}
+                onChange={submit}
+              />
+            ))}
+          </div>
+        </FilterGroup>
 
-      <div className="col-span-2 flex items-end gap-2 sm:col-span-3 lg:col-span-6">
-        <Button type="submit" size="sm">
+        <Button type="submit" size="sm" className="w-full">
           Застосувати
         </Button>
-        <Button type="button" variant="ghost" size="sm" render={<Link href="/search" />} nativeButton={false}>
-          Скинути фільтри
-        </Button>
-      </div>
-    </form>
+      </form>
+    </aside>
   );
 }

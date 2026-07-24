@@ -96,7 +96,7 @@ export default async function SearchPage({
   }
 
   return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-10">
+    <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10">
       <div>
         <h1 className="font-heading text-3xl font-bold">Знайти майстра</h1>
         <p className="text-muted-foreground mt-1">
@@ -104,41 +104,51 @@ export default async function SearchPage({
         </p>
       </div>
 
-      <SearchFilters
-        categories={categories.map((c) => ({
-          id: c.id,
-          name: c.name,
-          parentName: c.parent?.name ?? "",
-        }))}
-        cities={cities}
-        defaultValues={{
-          category,
-          city,
-          type: type ?? "all",
-          minPrice,
-          maxPrice,
-          minRating,
-          sort: sort ?? "default",
-        }}
-      />
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        <SearchFilters
+          categories={categories.map((c) => ({
+            id: c.id,
+            name: c.name,
+            parentName: c.parent?.name ?? "",
+          }))}
+          cities={cities}
+          defaultValues={{
+            category,
+            city,
+            type: type ?? "all",
+            minPrice,
+            maxPrice,
+            minRating,
+            sort: sort ?? "default",
+          }}
+        />
 
-      {results.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
-          <div className="bg-accent text-accent-foreground flex size-12 items-center justify-center rounded-full">
-            <SearchIcon className="size-6" />
-          </div>
-          <p className="font-medium">Поки немає майстрів за вашим запитом</p>
-          <p className="text-muted-foreground max-w-sm text-sm">
-            Спробуйте змінити фільтри — інше місто, ширший ціновий діапазон або іншу послугу.
+        <div className="flex-1">
+          <p className="text-muted-foreground mb-4 text-sm">
+            {results.length === 0
+              ? "Нічого не знайдено"
+              : `Знайдено майстрів: ${results.length}`}
           </p>
+
+          {results.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+              <div className="bg-accent text-accent-foreground flex size-12 items-center justify-center rounded-full">
+                <SearchIcon className="size-6" />
+              </div>
+              <p className="font-medium">Поки немає майстрів за вашим запитом</p>
+              <p className="text-muted-foreground max-w-sm text-sm">
+                Спробуйте змінити фільтри — інше місто, ширший ціновий діапазон або іншу послугу.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {results.map((item) => (
+                <MasterListingCard key={item.staffId} item={item} />
+              ))}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {results.map((item) => (
-            <MasterListingCard key={item.staffId} item={item} />
-          ))}
-        </div>
-      )}
+      </div>
     </main>
   );
 }
