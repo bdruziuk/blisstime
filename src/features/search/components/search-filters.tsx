@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 type Category = { id: string; name: string; parentName: string };
 
@@ -64,6 +64,123 @@ function FilterGroup({ title, children }: { title: string; children: React.React
   );
 }
 
+/**
+ * A real dropdown for the city filter: the trigger shows the selected city
+ * (or "Усі міста"), and the open panel always lists the full set of cities
+ * plus an optional search box — unlike a <datalist>, which collapses to just
+ * the already-typed value. Submits the parent form on selection.
+ */
+function CityDropdown({
+  cities,
+  defaultValue,
+  onSelect,
+}: {
+  cities: string[];
+  defaultValue: string;
+  onSelect: (city: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointer(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointer);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handlePointer);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+
+  const filtered = query
+    ? cities.filter((c) => c.toLowerCase().includes(query.toLowerCase()))
+    : cities;
+
+  function choose(city: string) {
+    setOpen(false);
+    setQuery("");
+    onSelect(city);
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <input type="hidden" name="city" value={defaultValue} />
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="border-input flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
+      >
+        <span className={defaultValue ? "" : "text-muted-foreground"}>
+          {defaultValue || "Усі міста"}
+        </span>
+        <ChevronDown className="text-muted-foreground size-4 shrink-0" />
+      </button>
+
+      {open && (
+        <div className="border-border bg-popover text-popover-foreground absolute z-30 mt-1 w-full overflow-hidden rounded-md border shadow-lg">
+          {cities.length > 6 && (
+            <div className="border-border border-b p-1.5">
+              <Input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Пошук міста..."
+                className="h-8"
+              />
+            </div>
+          )}
+          <div className="max-h-56 overflow-y-auto p-1" role="listbox">
+            <CityOption label="Усі міста" selected={defaultValue === ""} onClick={() => choose("")} />
+            {filtered.map((c) => (
+              <CityOption
+                key={c}
+                label={c}
+                selected={defaultValue === c}
+                onClick={() => choose(c)}
+              />
+            ))}
+            {filtered.length === 0 && (
+              <p className="text-muted-foreground px-2 py-1.5 text-sm">Місто не знайдено</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CityOption({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      onClick={onClick}
+      className="hover:bg-accent/60 aria-selected:bg-accent aria-selected:text-accent-foreground flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors aria-selected:font-semibold"
+    >
+      {label}
+      {selected && <Check className="size-3.5 shrink-0" />}
+    </button>
+  );
+}
+
 export function SearchFilters({
   categories,
   cities,
@@ -83,6 +200,15 @@ export function SearchFilters({
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const submit = () => formRef.current?.requestSubmit();
+
+  const [cityValue, setCityValue] = useState(defaultValues.city ?? "");
+  const cityDirty = useRef(false);
+  useEffect(() => {
+    if (!cityDirty.current) return;
+    cityDirty.current = false;
+    submit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cityValue]);
 
   const grouped = new Map<string, Category[]>();
   for (const c of categories) {
@@ -142,18 +268,14 @@ export function SearchFilters({
         </FilterGroup>
 
         <FilterGroup title="Місто">
-          <Input
-            id="filter-city"
-            name="city"
-            list="filter-cities"
-            defaultValue={defaultValues.city ?? ""}
-            placeholder="Напр. Київ"
+          <CityDropdown
+            cities={cities}
+            defaultValue={cityValue}
+            onSelect={(city) => {
+              cityDirty.current = true;
+              setCityValue(city);
+            }}
           />
-          <datalist id="filter-cities">
-            {cities.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
         </FilterGroup>
 
         <FilterGroup title="Тип">
