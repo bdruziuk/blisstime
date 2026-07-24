@@ -2,8 +2,11 @@ import Link from "next/link";
 import { Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WhyUs } from "@/features/landing/components/WhyUs";
+import { getCatalogCombos } from "@/features/catalog/queries";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const combos = (await getCatalogCombos()).slice(0, 8);
+
   return (
     <main className="flex flex-col">
       <section className="relative overflow-hidden">
@@ -51,6 +54,23 @@ export default function HomePage() {
       </section>
 
       <WhyUs />
+
+      {combos.length > 0 && (
+        <section className="mx-auto flex w-full max-w-3xl flex-col items-center gap-3 px-6 pb-20 text-center">
+          <p className="text-muted-foreground text-sm font-medium">Популярні категорії</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {combos.map((c) => (
+              <Link
+                key={`${c.citySlug}/${c.categorySlug}`}
+                href={`/${c.citySlug}/${c.categorySlug}`}
+                className="border-border hover:border-primary hover:text-primary rounded-full border px-3 py-1.5 text-sm transition-colors"
+              >
+                {c.categoryName} — {c.city}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
     </main>
   );
 }

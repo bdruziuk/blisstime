@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -157,7 +158,7 @@ export function SearchFilters({
         <Button type="submit" size="sm">
           Застосувати
         </Button>
-        <Button type="button" variant="ghost" size="sm" render={<a href="/search" />} nativeButton={false}>
+        <Button type="button" variant="ghost" size="sm" render={<Link href="/search" />} nativeButton={false}>
           Скинути фільтри
         </Button>
       </div>
