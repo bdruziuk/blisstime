@@ -4,7 +4,8 @@ import { MapPin, CalendarCheck, Sparkles, ArrowLeft, Star } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookingWidget } from "@/features/booking/components/booking-widget";
-import { getStaffRatingStats } from "@/features/booking/rating";
+import { getStaffRatingStats, getStaffReviews } from "@/features/booking/rating";
+import { ReviewsSection } from "@/features/booking/components/reviews-section";
 
 export default async function MasterPublicPage({
   params,
@@ -23,7 +24,10 @@ export default async function MasterPublicPage({
 
   if (!staff || !staff.onboardedAt) notFound();
 
-  const ratingStats = await getStaffRatingStats(staff.id);
+  const [ratingStats, reviews] = await Promise.all([
+    getStaffRatingStats(staff.id),
+    getStaffReviews(staff.id),
+  ]);
 
   const initials = staff.displayName
     .split(" ")
@@ -60,10 +64,13 @@ export default async function MasterPublicPage({
               <p className="flex items-center gap-1 text-sm font-semibold">
                 <Star className="fill-primary text-primary size-4" />
                 {ratingStats.avgRating.toFixed(1)}
-                <span className="text-muted-foreground font-normal">
+                <a
+                  href="#reviews"
+                  className="text-muted-foreground hover:text-primary font-normal underline underline-offset-4"
+                >
                   ({ratingStats.reviewCount}{" "}
                   {ratingStats.reviewCount === 1 ? "відгук" : "відгуків"})
-                </span>
+                </a>
               </p>
             )}
             <p className="text-muted-foreground flex items-center gap-1.5 text-sm">
@@ -116,6 +123,8 @@ export default async function MasterPublicPage({
             )}
           </CardContent>
         </Card>
+
+        <ReviewsSection reviews={reviews} />
       </div>
     </main>
   );

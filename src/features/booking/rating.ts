@@ -2,6 +2,51 @@ import { prisma } from "@/lib/prisma";
 
 export type RatingStats = { avgRating: number; reviewCount: number };
 
+export type StaffReview = {
+  id: string;
+  rating: number;
+  comment: string | null;
+  createdAt: Date;
+  clientName: string | null;
+  serviceName: string;
+};
+
+/** Public-safe first name only — never expose a client's full name in reviews. */
+function firstName(name: string | null): string | null {
+  if (!name) return null;
+  return name.trim().split(/\s+/)[0] || null;
+}
+
+/** Reviews for the public master page, newest first. */
+export async function getStaffReviews(staffId: string, limit = 20): Promise<StaffReview[]> {
+  const reviews = await prisma.review.findMany({
+    where: { booking: { staffId } },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
+      createdAt: true,
+      booking: {
+        select: {
+          client: { select: { name: true } },
+          service: { select: { displayName: true } },
+        },
+      },
+    },
+  });
+
+  return reviews.map((r) => ({
+    id: r.id,
+    rating: r.rating,
+    comment: r.comment,
+    createdAt: r.createdAt,
+    clientName: firstName(r.booking.client.name),
+    serviceName: r.booking.service.displayName,
+  }));
+}
+
 /** Single-staff rating lookup, e.g. for the public master page. */
 export async function getStaffRatingStats(staffId: string): Promise<RatingStats | null> {
   const agg = await prisma.review.aggregate({
