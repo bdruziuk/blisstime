@@ -22,6 +22,29 @@ function todayISOInBusinessTz() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: BUSINESS_TIMEZONE }).format(new Date());
 }
 
+// Shared include so every view sees all procedures in a booking, not just the
+// primary one. `service` (primary) stays for back-compat / a safe fallback.
+const bookingInclude = {
+  client: true,
+  service: true,
+  services: { include: { service: true } },
+} as const;
+
+type BookingWithServices = {
+  service: { displayName: string };
+  services: { serviceId: string; service: { displayName: string } }[];
+};
+
+/** Combined "Манікюр + Педикюр" label across all procedures in the booking. */
+function serviceLabel(b: BookingWithServices): string {
+  if (b.services.length > 0) return b.services.map((s) => s.service.displayName).join(" + ");
+  return b.service.displayName;
+}
+
+function serviceIdsOf(b: BookingWithServices & { serviceId: string }): string[] {
+  return b.services.length > 0 ? b.services.map((s) => s.serviceId) : [b.serviceId];
+}
+
 const VIEWS: BookingsView[] = ["list", "day", "week", "month"];
 
 export default async function BookingsPage({
@@ -93,14 +116,14 @@ async function BookingsListContent({
   if (!validCursor) {
     bookings = await prisma.booking.findMany({
       where: { staffId, slotStart: { gte: new Date() } },
-      include: { client: true, service: true },
+      include: bookingInclude,
       orderBy: { slotStart: "asc" },
       take: LIST_PAGE_SIZE,
     });
   } else if (dir === "prev") {
     const rows = await prisma.booking.findMany({
       where: { staffId, slotStart: { lt: validCursor } },
-      include: { client: true, service: true },
+      include: bookingInclude,
       orderBy: { slotStart: "desc" },
       take: LIST_PAGE_SIZE,
     });
@@ -108,7 +131,7 @@ async function BookingsListContent({
   } else {
     bookings = await prisma.booking.findMany({
       where: { staffId, slotStart: { gt: validCursor } },
-      include: { client: true, service: true },
+      include: bookingInclude,
       orderBy: { slotStart: "asc" },
       take: LIST_PAGE_SIZE,
     });
@@ -137,7 +160,7 @@ async function BookingsListContent({
             slotStartISO: b.slotStart.toISOString(),
             slotEndISO: b.slotEnd.toISOString(),
             clientName: b.client.name ?? b.client.phone,
-            serviceName: b.service.displayName,
+            serviceName: serviceLabel(b),
           })),
         }))}
       />
@@ -174,7 +197,7 @@ async function BookingsDayContent({ staffId, dateISO }: { staffId: string; dateI
   const [bookings, services] = await Promise.all([
     prisma.booking.findMany({
       where: { staffId, slotStart: { gte: start, lte: end } },
-      include: { client: true, service: true },
+      include: bookingInclude,
       orderBy: { slotStart: "asc" },
     }),
     prisma.staffService.findMany({ where: { staffId, isActive: true } }),
@@ -210,8 +233,9 @@ async function BookingsDayContent({ staffId, dateISO }: { staffId: string; dateI
           clientName: b.client.name ?? b.client.phone,
           clientPhone: b.client.phone,
           serviceId: b.serviceId,
-          serviceName: b.service.displayName,
-          durationMinutes: b.service.durationMinutes,
+          serviceIds: serviceIdsOf(b),
+          serviceName: serviceLabel(b),
+          durationMinutes: Math.round((b.slotEnd.getTime() - b.slotStart.getTime()) / 60_000),
         }))}
         services={services.map((s) => ({
           id: s.id,
@@ -243,7 +267,7 @@ async function BookingsWeekContent({
       slotStart: { gte: start, lte: end },
       status: { notIn: ["CANCELLED", "DECLINED", "EXPIRED"] },
     },
-    include: { client: true, service: true },
+    include: bookingInclude,
     orderBy: { slotStart: "asc" },
   });
 
@@ -254,7 +278,7 @@ async function BookingsWeekContent({
       id: b.id,
       slotStartISO: b.slotStart.toISOString(),
       clientName: b.client.name ?? b.client.phone,
-      serviceName: b.service.displayName,
+      serviceName: serviceLabel(b),
     });
   }
 

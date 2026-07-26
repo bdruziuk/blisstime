@@ -27,6 +27,7 @@ type BookingItem = {
   clientName: string;
   clientPhone: string;
   serviceId: string;
+  serviceIds: string[];
   serviceName: string;
   durationMinutes: number;
 };
@@ -46,26 +47,27 @@ function holdMinutesLeft(holdExpiresAtISO: string | null) {
 
 function SlotPicker({
   staffId,
-  serviceId,
+  serviceIds,
   dateISO,
   excludeBookingId,
   onPick,
 }: {
   staffId: string;
-  serviceId: string;
+  serviceIds: string[];
   dateISO: string;
   excludeBookingId?: string;
   onPick: (startISO: string) => void;
 }) {
   const [slots, setSlots] = useState<{ startISO: string; endISO: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const serviceIdsKey = serviceIds.join(",");
 
   useEffect(() => {
     setLoading(true);
-    getAvailableSlots(staffId, serviceId, dateISO, excludeBookingId)
+    getAvailableSlots(staffId, serviceIdsKey.split(","), dateISO, excludeBookingId)
       .then(setSlots)
       .finally(() => setLoading(false));
-  }, [staffId, serviceId, dateISO, excludeBookingId]);
+  }, [staffId, serviceIdsKey, dateISO, excludeBookingId]);
 
   if (loading) return <p className="text-muted-foreground text-sm">Завантаження...</p>;
   if (slots.length === 0)
@@ -124,7 +126,7 @@ function RescheduleForm({
       />
       <SlotPicker
         staffId={staffId}
-        serviceId={booking.serviceId}
+        serviceIds={booking.serviceIds.length > 0 ? booking.serviceIds : [booking.serviceId]}
         dateISO={date}
         excludeBookingId={booking.id}
         onPick={setSelectedStartISO}
@@ -294,7 +296,7 @@ function ManualAddForm({
           className="w-48"
         />
         {serviceId && (
-          <SlotPicker staffId={staffId} serviceId={serviceId} dateISO={date} onPick={setSelectedStartISO} />
+          <SlotPicker staffId={staffId} serviceIds={[serviceId]} dateISO={date} onPick={setSelectedStartISO} />
         )}
         {selectedStartISO && (
           <p className="text-sm">

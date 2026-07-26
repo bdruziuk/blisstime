@@ -120,8 +120,9 @@ model StaffService {
   staff    Staff           @relation(fields: [staffId], references: [id], onDelete: Cascade)
   category ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
-  bookings      Booking[]
-  reminderRules ReminderRule[]
+  bookings        Booking[]
+  bookingServices BookingService[]
+  reminderRules   ReminderRule[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -157,6 +158,10 @@ model Booking {
   id        String        @id @default(cuid())
   clientId  String
   staffId   String
+  // Primary service (the first one chosen). A booking can cover several
+  // procedures back-to-back — the full set lives in `services`, and
+  // slotStart/slotEnd span their combined duration. Kept for quick access
+  // and back-compat with single-service reads.
   serviceId String
   status    BookingStatus @default(PENDING)
 
@@ -174,6 +179,7 @@ model Booking {
   staff   Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)
   service StaffService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
+  services   BookingService[]
   prepayment Prepayment?
   review     Review?
 
@@ -181,6 +187,20 @@ model Booking {
   updatedAt DateTime @updatedAt
 
   @@index([staffId, slotStart])
+}
+
+// All procedures included in a single booking (one appointment, several
+// services performed back-to-back). Duration/price are summed from these.
+model BookingService {
+  id        String @id @default(cuid())
+  bookingId String
+  serviceId String
+
+  booking Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  service StaffService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([bookingId, serviceId])
+  @@index([serviceId])
 }
 
 model Prepayment {

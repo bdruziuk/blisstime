@@ -32,6 +32,7 @@ export async function getStaffReviews(staffId: string, limit = 20): Promise<Staf
         select: {
           client: { select: { name: true } },
           service: { select: { displayName: true } },
+          services: { select: { service: { select: { displayName: true } } } },
         },
       },
     },
@@ -43,7 +44,10 @@ export async function getStaffReviews(staffId: string, limit = 20): Promise<Staf
     comment: r.comment,
     createdAt: r.createdAt,
     clientName: firstName(r.booking.client.name),
-    serviceName: r.booking.service.displayName,
+    serviceName:
+      r.booking.services.length > 0
+        ? r.booking.services.map((s) => s.service.displayName).join(" + ")
+        : r.booking.service.displayName,
   }));
 }
 

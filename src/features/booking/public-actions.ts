@@ -16,17 +16,21 @@ export type ActionState =
 
 export async function getAvailableSlots(
   staffId: string,
-  serviceId: string,
+  serviceIds: string[],
   dateISO: string,
   excludeBookingId?: string
 ): Promise<{ startISO: string; endISO: string }[]> {
   await expireStaleHolds(staffId);
 
-  const [staff, service] = await Promise.all([
+  if (serviceIds.length === 0) return [];
+
+  const [staff, servicesForStaff] = await Promise.all([
     prisma.staff.findUnique({ where: { id: staffId }, include: { location: true } }),
-    prisma.staffService.findUnique({ where: { id: serviceId } }),
+    prisma.staffService.findMany({ where: { id: { in: serviceIds }, staffId } }),
   ]);
-  if (!staff || !service || service.staffId !== staffId) return [];
+  if (!staff || servicesForStaff.length !== serviceIds.length) return [];
+
+  const totalDuration = servicesForStaff.reduce((sum, s) => sum + s.durationMinutes, 0);
 
   const { start: dayStart, end: dayEnd } = getDayBoundsUTC(dateISO);
 
@@ -48,7 +52,7 @@ export async function getAvailableSlots(
   const slots = generateSlotsForDate({
     dateISO,
     workingHours: staff.location.workingHours as WorkingHours,
-    durationMinutes: service.durationMinutes,
+    durationMinutes: totalDuration,
     existingBookings,
     blockedRanges: blocks.map((b) => ({ start: b.startsAt, end: b.endsAt })),
   });
@@ -61,7 +65,7 @@ export async function createBooking(
   formData: FormData
 ): Promise<ActionState> {
   const parsed = bookingSchema.safeParse({
-    serviceId: formData.get("serviceId"),
+    serviceIds: formData.get("serviceIds"),
     slotStartISO: formData.get("slotStartISO"),
     clientName: formData.get("clientName"),
     clientPhone: formData.get("clientPhone"),
@@ -69,40 +73,52 @@ export async function createBooking(
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
-  const { serviceId, slotStartISO, clientName, clientPhone } = parsed.data;
+  const { serviceIds, slotStartISO, clientName, clientPhone } = parsed.data;
 
   const phone = normalizePhone(clientPhone);
   if (!phone) {
     return { error: "Некоректний номер телефону" };
   }
 
-  const service = await prisma.staffService.findUnique({
-    where: { id: serviceId },
+  // All selected services must belong to the same staff member. Ordering is
+  // preserved to match the client's selection (first = primary).
+  const services = await prisma.staffService.findMany({
+    where: { id: { in: serviceIds } },
     include: { staff: true },
   });
-  if (!service) {
+  const orderedServices = serviceIds
+    .map((id) => services.find((s) => s.id === id))
+    .filter((s): s is (typeof services)[number] => Boolean(s));
+  const staffId = orderedServices[0]?.staffId;
+  if (
+    orderedServices.length !== serviceIds.length ||
+    !staffId ||
+    orderedServices.some((s) => s.staffId !== staffId)
+  ) {
     return { error: "Послугу не знайдено" };
   }
+  const staff = orderedServices[0].staff;
 
   const slotStart = new Date(slotStartISO);
   if (Number.isNaN(slotStart.getTime())) {
     return { error: "Некоректний час" };
   }
-  const slotEnd = new Date(slotStart.getTime() + service.durationMinutes * 60_000);
+  const totalDuration = orderedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+  const slotEnd = new Date(slotStart.getTime() + totalDuration * 60_000);
 
-  await expireStaleHolds(service.staffId);
+  await expireStaleHolds(staffId);
 
   const existingClient = await prisma.client.findUnique({ where: { phone } });
 
   const { status, holdExpiresAt } = decideInitialBookingStatus({
-    confirmationMode: service.staff.confirmationMode,
-    holdDurationMinutes: service.staff.holdDurationMinutes,
+    confirmationMode: staff.confirmationMode,
+    holdDurationMinutes: staff.holdDurationMinutes,
     clientReliabilityScore: existingClient?.reliabilityScore ?? null,
   });
 
   const result = await insertBookingForClient({
-    staffId: service.staffId,
-    serviceId: service.id,
+    staffId,
+    serviceIds: orderedServices.map((s) => s.id),
     slotStart,
     slotEnd,
     clientPhone: phone,
@@ -114,7 +130,7 @@ export async function createBooking(
   if ("error" in result) return result;
 
   const medianResponseMinutes =
-    result.status === "PENDING" ? await getMedianResponseMinutes(service.staffId) : null;
+    result.status === "PENDING" ? await getMedianResponseMinutes(staffId) : null;
 
   return { success: true, status: result.status, medianResponseMinutes };
 }

@@ -60,13 +60,26 @@ export const locationSchema = z.object({
 });
 export type LocationInput = z.infer<typeof locationSchema>;
 
+// Public booking: one or more services, submitted as a comma-separated list.
 export const bookingSchema = z.object({
-  serviceId: z.string().min(1, "Оберіть послугу"),
+  serviceIds: z
+    .string()
+    .transform((s) => s.split(",").map((id) => id.trim()).filter(Boolean))
+    .pipe(z.array(z.string().min(1)).min(1, "Оберіть хоча б одну послугу")),
   slotStartISO: z.string().min(1, "Оберіть час"),
   clientName: z.string().trim().min(2, "Мінімум 2 символи"),
   clientPhone: z.string().trim().min(9, "Некоректний номер телефону"),
 });
 export type BookingInput = z.infer<typeof bookingSchema>;
+
+// Admin-entered booking: a single service typed in by the master.
+export const manualBookingSchema = z.object({
+  serviceId: z.string().min(1, "Оберіть послугу"),
+  slotStartISO: z.string().min(1, "Оберіть час"),
+  clientName: z.string().trim().min(2, "Мінімум 2 символи"),
+  clientPhone: z.string().trim().min(9, "Некоректний номер телефону"),
+});
+export type ManualBookingInput = z.infer<typeof manualBookingSchema>;
 
 export const CONFIRMATION_MODES = ["MANUAL", "AUTO_ALL", "AUTO_TRUSTED"] as const;
 export type ConfirmationModeValue = (typeof CONFIRMATION_MODES)[number];

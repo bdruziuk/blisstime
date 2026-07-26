@@ -51,7 +51,7 @@ export function BookingWidget({
   staffId: string;
   services: ServiceItem[];
 }) {
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [date, setDate] = useState(todayISO());
   const [slots, setSlots] = useState<SlotOption[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -62,14 +62,31 @@ export function BookingWidget({
     undefined
   );
 
+  const selectedServices = selectedServiceIds
+    .map((id) => services.find((s) => s.id === id))
+    .filter((s): s is ServiceItem => Boolean(s));
+  const totalPriceCents = selectedServices.reduce((sum, s) => sum + s.priceCents, 0);
+  const totalDuration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+  const hasSelection = selectedServiceIds.length > 0;
+  const serviceIdsKey = selectedServiceIds.join(",");
+
+  function toggleService(id: string) {
+    setSelectedServiceIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
+  }
+
   useEffect(() => {
-    if (!selectedServiceId) return;
+    if (!serviceIdsKey) {
+      setSlots([]);
+      return;
+    }
     setSelectedSlot(null);
     setLoadingSlots(true);
-    getAvailableSlots(staffId, selectedServiceId, date)
+    getAvailableSlots(staffId, serviceIdsKey.split(","), date)
       .then(setSlots)
       .finally(() => setLoadingSlots(false));
-  }, [staffId, selectedServiceId, date]);
+  }, [staffId, serviceIdsKey, date]);
 
   if (state && "success" in state) {
     const isPending = state.status === "PENDING";
@@ -96,44 +113,60 @@ export function BookingWidget({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3">
-        <StepLabel n={1}>Оберіть послугу</StepLabel>
+        <StepLabel n={1}>Оберіть послуги</StepLabel>
         <div className="flex flex-col gap-2">
           {services.map((service) => {
-            const selected = selectedServiceId === service.id;
+            const selected = selectedServiceIds.includes(service.id);
             return (
               <button
                 key={service.id}
                 type="button"
-                onClick={() => setSelectedServiceId(service.id)}
+                aria-pressed={selected}
+                onClick={() => toggleService(service.id)}
                 className={`flex items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition-all ${
                   selected
                     ? "border-primary bg-accent shadow-sm"
                     : "border-border hover:border-primary/40 hover:bg-accent/40"
                 }`}
               >
-                <div>
-                  <div className="font-semibold">{service.displayName}</div>
-                  <div className="text-muted-foreground text-xs">
-                    {service.categoryName} · {service.durationMinutes} хв
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex size-5 shrink-0 items-center justify-center rounded-md border ${
+                      selected
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border"
+                    }`}
+                  >
+                    {selected && <Check className="size-3.5" strokeWidth={3} />}
+                  </span>
+                  <div>
+                    <div className="font-semibold">{service.displayName}</div>
+                    <div className="text-muted-foreground text-xs">
+                      {service.categoryName} · {service.durationMinutes} хв
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-primary font-bold">
-                    {(service.priceCents / 100).toFixed(0)} грн
-                  </span>
-                  {selected && (
-                    <span className="bg-primary text-primary-foreground flex size-5 items-center justify-center rounded-full">
-                      <Check className="size-3.5" strokeWidth={3} />
-                    </span>
-                  )}
-                </div>
+                <span className="text-primary font-bold">
+                  {(service.priceCents / 100).toFixed(0)} грн
+                </span>
               </button>
             );
           })}
         </div>
+
+        {hasSelection && (
+          <div className="bg-accent/50 flex items-center justify-between rounded-lg px-4 py-2.5 text-sm">
+            <span className="text-muted-foreground">
+              Обрано {selectedServices.length} · {totalDuration} хв
+            </span>
+            <span className="text-primary font-bold">
+              {(totalPriceCents / 100).toFixed(0)} грн
+            </span>
+          </div>
+        )}
       </div>
 
-      {selectedServiceId && (
+      {hasSelection && (
         <div className="flex flex-col gap-3 border-t pt-5">
           <StepLabel n={2}>Оберіть дату і час</StepLabel>
           <Input
@@ -171,11 +204,11 @@ export function BookingWidget({
         </div>
       )}
 
-      {selectedSlot && selectedServiceId && (
+      {selectedSlot && hasSelection && (
         <div className="flex flex-col gap-3 border-t pt-5">
           <StepLabel n={3}>Ваші контакти</StepLabel>
           <form action={formAction} className="flex flex-col gap-3">
-            <input type="hidden" name="serviceId" value={selectedServiceId} />
+            <input type="hidden" name="serviceIds" value={serviceIdsKey} />
             <input type="hidden" name="slotStartISO" value={selectedSlot.startISO} />
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="clientName">Ваше ім&apos;я</Label>

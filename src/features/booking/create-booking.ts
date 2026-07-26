@@ -44,7 +44,7 @@ export function decideInitialBookingStatus({
  */
 export async function insertBookingForClient({
   staffId,
-  serviceId,
+  serviceIds,
   slotStart,
   slotEnd,
   clientPhone,
@@ -53,7 +53,8 @@ export async function insertBookingForClient({
   holdExpiresAt,
 }: {
   staffId: string;
-  serviceId: string;
+  /** One or more procedures performed back-to-back; the first is the primary. */
+  serviceIds: string[];
   slotStart: Date;
   slotEnd: Date;
   clientPhone: string;
@@ -61,6 +62,9 @@ export async function insertBookingForClient({
   status: BookableStatus;
   holdExpiresAt: Date | null;
 }): Promise<CreateBookingResult> {
+  if (serviceIds.length === 0) {
+    return { error: "Оберіть хоча б одну послугу" };
+  }
   const overlapping = await prisma.booking.findFirst({
     where: {
       staffId,
@@ -92,12 +96,13 @@ export async function insertBookingForClient({
         data: {
           clientId: client.id,
           staffId,
-          serviceId,
+          serviceId: serviceIds[0],
           slotStart,
           slotEnd,
           status,
           holdExpiresAt,
           respondedAt: status === "CONFIRMED" ? new Date() : null,
+          services: { create: serviceIds.map((id) => ({ serviceId: id })) },
         },
       });
     });

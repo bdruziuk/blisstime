@@ -6,7 +6,7 @@ import { fromZonedTime } from "date-fns-tz";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { BookingStatus } from "@/generated/prisma/client";
-import { bookingSchema, bookingSettingsSchema } from "./schemas";
+import { manualBookingSchema, bookingSettingsSchema } from "./schemas";
 import { normalizePhone } from "./phone";
 import { insertBookingForClient } from "./create-booking";
 import { expireStaleHolds } from "./expiry";
@@ -132,7 +132,7 @@ export async function createManualBooking(
   const staff = await requireStaff();
   await expireStaleHolds(staff.id);
 
-  const parsed = bookingSchema.safeParse({
+  const parsed = manualBookingSchema.safeParse({
     serviceId: formData.get("serviceId"),
     slotStartISO: formData.get("slotStartISO"),
     clientName: formData.get("clientName"),
@@ -165,7 +165,7 @@ export async function createManualBooking(
   // request-to-book round trip for something the master typed in themselves.
   const result = await insertBookingForClient({
     staffId: staff.id,
-    serviceId: service.id,
+    serviceIds: [service.id],
     slotStart,
     slotEnd,
     clientPhone: phone,
@@ -265,7 +265,6 @@ export async function rescheduleBooking(
 
   const booking = await prisma.booking.findFirst({
     where: { id: bookingId, staffId: staff.id },
-    include: { service: true },
   });
   if (!booking) {
     return { error: "Запис не знайдено" };
@@ -275,7 +274,9 @@ export async function rescheduleBooking(
   if (Number.isNaN(slotStart.getTime())) {
     return { error: "Некоректний час" };
   }
-  const slotEnd = new Date(slotStart.getTime() + booking.service.durationMinutes * 60_000);
+  // Preserve the booking's total duration (which may span several procedures).
+  const durationMs = booking.slotEnd.getTime() - booking.slotStart.getTime();
+  const slotEnd = new Date(slotStart.getTime() + durationMs);
 
   const overlapping = await prisma.booking.findFirst({
     where: {
