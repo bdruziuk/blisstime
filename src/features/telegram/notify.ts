@@ -1,8 +1,14 @@
 import { prisma } from "@/lib/prisma";
-import { tgSendMessage } from "@/lib/telegram";
+import { tgSendMessage, type InlineButton } from "@/lib/telegram";
 import { formatBookingWhen, escapeHtml } from "./handle-update";
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+
+// Telegram rejects inline-button URLs pointing at localhost/127.0.0.1, so we
+// only attach the "other time" link when the app is on a real public host.
+function isPublicUrl(url: string): boolean {
+  return /^https?:\/\//.test(url) && !/localhost|127\.0\.0\.1/.test(url);
+}
 
 /**
  * Notifies the master about a freshly created booking. PENDING requests get
@@ -36,13 +42,17 @@ export async function notifyMasterNewBooking(bookingId: string): Promise<void> {
       `${who} (${phone})\n` +
       `${escapeHtml(serviceNames)}\n` +
       `🕐 ${when}`;
-    await tgSendMessage(chatId, text, [
+    const keyboard: InlineButton[][] = [
       [
         { text: "✅ Підтвердити", callback_data: `confirm:${booking.id}` },
         { text: "❌ Відхилити", callback_data: `decline:${booking.id}` },
       ],
-      [{ text: "🕐 Інший час", url: `${APP_URL}/dashboard/bookings` }],
-    ]);
+    ];
+    const dashboardUrl = `${APP_URL}/dashboard/bookings`;
+    if (isPublicUrl(dashboardUrl)) {
+      keyboard.push([{ text: "🕐 Інший час", url: dashboardUrl }]);
+    }
+    await tgSendMessage(chatId, text, keyboard);
   } else if (booking.status === "CONFIRMED") {
     const text =
       `✅ <b>Новий запис</b> (підтверджено автоматично)\n` +
