@@ -4,8 +4,19 @@ import { Button } from "@/components/ui/button";
 import { WhyUs } from "@/features/landing/components/WhyUs";
 import { getCatalogCombos } from "@/features/catalog/queries";
 
+// ISR: regenerate at runtime so the DB isn't required during the build.
+export const revalidate = 3600;
+
+async function getPopularCombos() {
+  try {
+    return (await getCatalogCombos()).slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const combos = (await getCatalogCombos()).slice(0, 8);
+  const combos = await getPopularCombos();
 
   return (
     <main className="flex flex-col">

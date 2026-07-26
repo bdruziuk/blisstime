@@ -25,8 +25,15 @@ async function resolveParams(params: Promise<CatalogPageParams>) {
 }
 
 export async function generateStaticParams() {
-  const combos = await getCatalogCombos();
-  return combos.map((c) => ({ city: c.citySlug, category: c.categorySlug }));
+  // Runs at build time, before the production DB is migrated on deploy — don't
+  // let an unreachable/empty DB fail the build. Pages render on-demand (ISR)
+  // once the DB is ready.
+  try {
+    const combos = await getCatalogCombos();
+    return combos.map((c) => ({ city: c.citySlug, category: c.categorySlug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({
