@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ServiceForm } from "@/features/booking/components/service-form";
 import { AiImportPanel } from "@/features/ai-import/components/ai-import-panel";
+import { NichePresetPicker } from "@/features/onboarding/components/niche-preset-picker";
 import { goToHoursStep, removeService } from "@/features/booking/actions";
 
 export default async function OnboardingServicesPage() {
@@ -30,6 +31,8 @@ export default async function OnboardingServicesPage() {
           <CardTitle>Крок 2/3 — Послуги</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
+          <NichePresetPicker />
+
           {staff.services.length > 0 && (
             <ul className="flex flex-col gap-2">
               {staff.services.map((service) => (
