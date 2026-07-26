@@ -6,6 +6,9 @@ import { prisma } from "@/lib/prisma";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  // Trust the host/proto from the request (Railway and other proxies) so
+  // Auth.js builds callback URLs from the incoming request, not a hardcoded env.
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
