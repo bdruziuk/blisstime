@@ -4,7 +4,7 @@ export type BookableStatus = "PENDING" | "CONFIRMED";
 
 export type CreateBookingResult =
   | { error: string }
-  | { success: true; status: BookableStatus };
+  | { success: true; status: BookableStatus; bookingId: string };
 
 const AUTO_TRUSTED_MIN_RELIABILITY = 70;
 
@@ -84,15 +84,16 @@ export async function insertBookingForClient({
     return { error: "Цей час недоступний (вихідний або перерва)" };
   }
 
+  let bookingId: string;
   try {
-    await prisma.$transaction(async (tx) => {
+    bookingId = await prisma.$transaction(async (tx) => {
       const client = await tx.client.upsert({
         where: { phone: clientPhone },
         update: { name: clientName },
         create: { phone: clientPhone, name: clientName },
       });
 
-      await tx.booking.create({
+      const booking = await tx.booking.create({
         data: {
           clientId: client.id,
           staffId,
@@ -105,6 +106,7 @@ export async function insertBookingForClient({
           services: { create: serviceIds.map((id) => ({ serviceId: id })) },
         },
       });
+      return booking.id;
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("booking_no_overlap")) {
@@ -113,5 +115,5 @@ export async function insertBookingForClient({
     throw error;
   }
 
-  return { success: true, status };
+  return { success: true, status, bookingId };
 }

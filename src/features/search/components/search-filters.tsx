@@ -207,7 +207,6 @@ export function SearchFilters({
     if (!cityDirty.current) return;
     cityDirty.current = false;
     submit();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cityValue]);
 
   const grouped = new Map<string, Category[]>();

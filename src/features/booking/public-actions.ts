@@ -7,6 +7,7 @@ import { generateSlotsForDate, getDayBoundsUTC, type WorkingHours } from "./slot
 import { insertBookingForClient, decideInitialBookingStatus } from "./create-booking";
 import { expireStaleHolds } from "./expiry";
 import { getMedianResponseMinutes } from "./response-time";
+import { notifyMasterNewBooking } from "@/features/telegram/notify";
 import type { BookableStatus } from "./create-booking";
 
 export type ActionState =
@@ -128,6 +129,13 @@ export async function createBooking(
   });
 
   if ("error" in result) return result;
+
+  // Best-effort master notification — a Telegram hiccup must not fail the booking.
+  try {
+    await notifyMasterNewBooking(result.bookingId);
+  } catch (err) {
+    console.error("[telegram] notify on new booking failed:", err);
+  }
 
   const medianResponseMinutes =
     result.status === "PENDING" ? await getMedianResponseMinutes(staffId) : null;

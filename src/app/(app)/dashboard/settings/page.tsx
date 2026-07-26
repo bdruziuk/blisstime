@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "@/features/booking/components/settings-form";
 import { ScheduleBlocksPanel } from "@/features/booking/components/schedule-blocks-panel";
+import { TelegramConnect } from "@/features/telegram/components/telegram-connect";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -29,6 +30,15 @@ export default async function SettingsPage() {
             defaultConfirmationMode={staff.confirmationMode}
             defaultHoldDurationMinutes={staff.holdDurationMinutes}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Telegram-сповіщення</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TelegramConnect connected={Boolean(staff.telegramChatId)} />
         </CardContent>
       </Card>
 

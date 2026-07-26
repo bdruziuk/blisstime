@@ -81,6 +81,11 @@ model Staff {
   confirmationMode    ConfirmationMode @default(MANUAL)
   holdDurationMinutes Int              @default(180)
 
+  // Telegram: chat id where the bot notifies this master; link token is the
+  // one-time secret embedded in the t.me/<bot>?start=<token> deep link.
+  telegramChatId    String?
+  telegramLinkToken String? @unique
+
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
@@ -174,6 +179,8 @@ model Booking {
   // When the master confirmed/declined — used for the response-time estimate.
   respondedAt   DateTime?
   cancelledAt   DateTime?
+  // Set once the 24h-before Telegram reminder has gone out (prevents repeats).
+  masterReminderSentAt DateTime?
 
   client  Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
   staff   Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)
