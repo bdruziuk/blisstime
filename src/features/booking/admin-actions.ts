@@ -11,7 +11,11 @@ import { normalizePhone } from "./phone";
 import { insertBookingForClient } from "./create-booking";
 import { expireStaleHolds } from "./expiry";
 import { BUSINESS_TIMEZONE, getDayBoundsUTC } from "./slots";
-import { notifyClientBookingConfirmed, sendClientReviewRequest } from "@/features/telegram/notify";
+import {
+  notifyClientBookingConfirmed,
+  sendClientReviewRequest,
+  notifyWaitlistForFreedSlot,
+} from "@/features/telegram/notify";
 
 async function safeNotify(fn: () => Promise<void>) {
   try {
@@ -58,11 +62,18 @@ export async function confirmBooking(bookingId: string) {
 export async function declineBooking(bookingId: string) {
   const staff = await requireStaff();
 
-  await prisma.booking.updateMany({
+  const booking = await prisma.booking.findFirst({
+    where: { id: bookingId, staffId: staff.id, status: "PENDING" },
+  });
+
+  const { count } = await prisma.booking.updateMany({
     where: { id: bookingId, staffId: staff.id, status: "PENDING" },
     data: { status: "DECLINED", respondedAt: new Date() },
   });
 
+  if (count > 0 && booking && booking.slotStart > new Date()) {
+    await safeNotify(() => notifyWaitlistForFreedSlot(staff.id, booking.slotStart));
+  }
   revalidatePath("/dashboard/bookings");
 }
 
@@ -94,6 +105,10 @@ export async function cancelBooking(bookingId: string) {
     }
   });
 
+  // Offer the freed future slot to anyone waiting for that day.
+  if (booking.slotStart > new Date()) {
+    await safeNotify(() => notifyWaitlistForFreedSlot(staff.id, booking.slotStart));
+  }
   revalidatePath("/dashboard/bookings");
 }
 

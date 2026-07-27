@@ -10,6 +10,7 @@ import {
   getAvailableSlots,
   type ActionState,
 } from "@/features/booking/public-actions";
+import { WaitlistForm } from "@/features/booking/components/waitlist-form";
 
 type ServiceItem = {
   id: string;
@@ -196,7 +197,10 @@ export function BookingWidget({
           {loadingSlots && <p className="text-muted-foreground text-sm">Завантаження...</p>}
 
           {!loadingSlots && slots.length === 0 && (
-            <p className="text-muted-foreground text-sm">Немає вільних слотів на цю дату.</p>
+            <div className="flex flex-col gap-3">
+              <p className="text-muted-foreground text-sm">Немає вільних слотів на цю дату.</p>
+              <WaitlistForm staffId={staffId} dateISO={date} />
+            </div>
           )}
 
           {!loadingSlots && slots.length > 0 && (

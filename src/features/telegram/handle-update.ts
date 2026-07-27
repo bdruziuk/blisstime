@@ -138,6 +138,15 @@ async function handleCallback(cb: NonNullable<TgUpdate["callback_query"]>) {
     });
     await tgAnswerCallbackQuery(cb.id, "Відхилено");
     await tgEditMessageText(chatId, messageId, `❌ <b>Відхилено</b>\n${who} — ${when}`);
+    // Offer the freed slot to the waitlist.
+    if (booking.slotStart > new Date()) {
+      try {
+        const { notifyWaitlistForFreedSlot } = await import("./notify");
+        await notifyWaitlistForFreedSlot(booking.staffId, booking.slotStart);
+      } catch (err) {
+        console.error("[telegram] waitlist notify failed:", err);
+      }
+    }
   }
 }
 

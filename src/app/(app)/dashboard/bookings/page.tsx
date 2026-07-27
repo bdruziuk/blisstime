@@ -75,6 +75,8 @@ export default async function BookingsPage({
         <BookingsViewSwitcher current={viewMode} dateISO={dateISO} />
       </div>
 
+      <WaitlistSummary staffId={staff.id} />
+
       {viewMode === "list" && (
         <BookingsListContent
           staffId={staff.id}
@@ -95,6 +97,39 @@ export default async function BookingsPage({
         <BookingsMonthContent staffId={staff.id} dateISO={dateISO} todayISO={todayISO} />
       )}
     </main>
+  );
+}
+
+async function WaitlistSummary({ staffId }: { staffId: string }) {
+  const entries = await prisma.waitlistEntry.findMany({
+    where: { staffId, desiredTo: { gte: new Date() } },
+    orderBy: { desiredFrom: "asc" },
+    include: { client: true },
+    take: 30,
+  });
+  if (entries.length === 0) return null;
+
+  const dayFmt = new Intl.DateTimeFormat("uk-UA", {
+    timeZone: BUSINESS_TIMEZONE,
+    day: "numeric",
+    month: "long",
+  });
+
+  return (
+    <div className="border-border bg-card rounded-xl border p-4">
+      <p className="font-heading mb-2 text-sm font-bold">Черга очікування ({entries.length})</p>
+      <ul className="flex flex-col gap-1.5 text-sm">
+        {entries.map((e) => (
+          <li key={e.id} className="flex items-center justify-between gap-2">
+            <span>{e.client.name ?? e.client.phone}</span>
+            <span className="text-muted-foreground text-xs">
+              {dayFmt.format(e.desiredFrom)}
+              {e.client.telegramChatId ? "" : " · без Telegram"}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

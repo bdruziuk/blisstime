@@ -99,6 +99,50 @@ export async function notifyClientBookingConfirmed(bookingId: string): Promise<v
   );
 }
 
+const WAITLIST_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * When a slot frees up (cancellation/decline), offers it to everyone on the
+ * staff member's waitlist whose desired window covers that time and who linked
+ * Telegram. A per-entry cooldown avoids spamming when several slots free at
+ * once. Best-effort — never throws into the cancel/decline flow.
+ */
+export async function notifyWaitlistForFreedSlot(
+  staffId: string,
+  slotStart: Date
+): Promise<void> {
+  const now = new Date();
+  const cooldownBefore = new Date(now.getTime() - WAITLIST_COOLDOWN_MS);
+
+  const entries = await prisma.waitlistEntry.findMany({
+    where: {
+      staffId,
+      desiredFrom: { lte: slotStart },
+      desiredTo: { gte: slotStart },
+      client: { telegramChatId: { not: null } },
+      OR: [{ notifiedAt: null }, { notifiedAt: { lt: cooldownBefore } }],
+    },
+    orderBy: { createdAt: "asc" },
+    include: { staff: true, client: true },
+  });
+
+  for (const entry of entries) {
+    const chatId = entry.client.telegramChatId;
+    if (!chatId) continue;
+    const when = formatBookingWhen(slotStart);
+    const bookUrl = `${APP_URL}/@${entry.staff.username}`;
+    const text =
+      `🔔 Звільнився час у ${escapeHtml(entry.staff.displayName)}!\n` +
+      `🕐 ${when}\nВстигніть записатися:`;
+    if (isPublicUrl(bookUrl)) {
+      await tgSendMessage(chatId, text, [[{ text: "Записатися", url: bookUrl }]]);
+    } else {
+      await tgSendMessage(chatId, `${text}\n${bookUrl}`);
+    }
+    await prisma.waitlistEntry.update({ where: { id: entry.id }, data: { notifiedAt: now } });
+  }
+}
+
 /** Asks the client for a review after a completed visit (if they linked Telegram). */
 export async function sendClientReviewRequest(bookingId: string): Promise<void> {
   const booking = await bookingForClientMessage(bookingId);
