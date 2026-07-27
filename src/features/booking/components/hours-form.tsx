@@ -20,6 +20,10 @@ export function HoursForm() {
         <Input id="city" name="city" required />
       </div>
       <div className="flex flex-col gap-1.5">
+        <Label htmlFor="district">Район (необов&apos;язково)</Label>
+        <Input id="district" name="district" placeholder="Напр. Печерський" />
+      </div>
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor="address">Адреса</Label>
         <Input id="address" name="address" required />
       </div>

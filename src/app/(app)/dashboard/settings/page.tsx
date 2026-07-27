@@ -5,12 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SettingsForm } from "@/features/booking/components/settings-form";
 import { ScheduleBlocksPanel } from "@/features/booking/components/schedule-blocks-panel";
 import { TelegramConnect } from "@/features/telegram/components/telegram-connect";
+import { LocationForm } from "@/features/booking/components/location-form";
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const staff = await prisma.staff.findUnique({ where: { userId: session.user.id } });
+  const staff = await prisma.staff.findUnique({
+    where: { userId: session.user.id },
+    include: { location: true },
+  });
   if (!staff) redirect("/register");
   if (!staff.onboardedAt) redirect("/onboarding/profile");
 
@@ -29,6 +33,19 @@ export default async function SettingsPage() {
           <SettingsForm
             defaultConfirmationMode={staff.confirmationMode}
             defaultHoldDurationMinutes={staff.holdDurationMinutes}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Локація</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <LocationForm
+            defaultCity={staff.location.city}
+            defaultAddress={staff.location.address}
+            defaultDistrict={staff.location.district ?? ""}
           />
         </CardContent>
       </Card>

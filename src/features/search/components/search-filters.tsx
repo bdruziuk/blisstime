@@ -65,19 +65,27 @@ function FilterGroup({ title, children }: { title: string; children: React.React
 }
 
 /**
- * A real dropdown for the city filter: the trigger shows the selected city
- * (or "Усі міста"), and the open panel always lists the full set of cities
- * plus an optional search box — unlike a <datalist>, which collapses to just
- * the already-typed value. Submits the parent form on selection.
+ * A real dropdown filter (used for city and district): the trigger shows the
+ * selected value (or an "all" label), and the open panel always lists every
+ * option plus an optional search box — unlike a <datalist>, which collapses to
+ * just the already-typed value. Submits the parent form on selection.
  */
-function CityDropdown({
-  cities,
+function FilterDropdown({
+  name,
+  options,
   defaultValue,
+  allLabel,
+  searchPlaceholder,
+  emptyLabel,
   onSelect,
 }: {
-  cities: string[];
+  name: string;
+  options: string[];
   defaultValue: string;
-  onSelect: (city: string) => void;
+  allLabel: string;
+  searchPlaceholder: string;
+  emptyLabel: string;
+  onSelect: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -100,18 +108,18 @@ function CityDropdown({
   }, [open]);
 
   const filtered = query
-    ? cities.filter((c) => c.toLowerCase().includes(query.toLowerCase()))
-    : cities;
+    ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase()))
+    : options;
 
-  function choose(city: string) {
+  function choose(value: string) {
     setOpen(false);
     setQuery("");
-    onSelect(city);
+    onSelect(value);
   }
 
   return (
     <div ref={ref} className="relative">
-      <input type="hidden" name="city" value={defaultValue} />
+      <input type="hidden" name={name} value={defaultValue} />
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -120,36 +128,36 @@ function CityDropdown({
         className="border-input flex h-9 w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs"
       >
         <span className={defaultValue ? "" : "text-muted-foreground"}>
-          {defaultValue || "Усі міста"}
+          {defaultValue || allLabel}
         </span>
         <ChevronDown className="text-muted-foreground size-4 shrink-0" />
       </button>
 
       {open && (
         <div className="border-border bg-popover text-popover-foreground absolute z-30 mt-1 w-full overflow-hidden rounded-md border shadow-lg">
-          {cities.length > 6 && (
+          {options.length > 6 && (
             <div className="border-border border-b p-1.5">
               <Input
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Пошук міста..."
+                placeholder={searchPlaceholder}
                 className="h-8"
               />
             </div>
           )}
           <div className="max-h-56 overflow-y-auto p-1" role="listbox">
-            <CityOption label="Усі міста" selected={defaultValue === ""} onClick={() => choose("")} />
-            {filtered.map((c) => (
-              <CityOption
-                key={c}
-                label={c}
-                selected={defaultValue === c}
-                onClick={() => choose(c)}
+            <DropdownOption label={allLabel} selected={defaultValue === ""} onClick={() => choose("")} />
+            {filtered.map((o) => (
+              <DropdownOption
+                key={o}
+                label={o}
+                selected={defaultValue === o}
+                onClick={() => choose(o)}
               />
             ))}
             {filtered.length === 0 && (
-              <p className="text-muted-foreground px-2 py-1.5 text-sm">Місто не знайдено</p>
+              <p className="text-muted-foreground px-2 py-1.5 text-sm">{emptyLabel}</p>
             )}
           </div>
         </div>
@@ -158,7 +166,7 @@ function CityDropdown({
   );
 }
 
-function CityOption({
+function DropdownOption({
   label,
   selected,
   onClick,
@@ -184,13 +192,16 @@ function CityOption({
 export function SearchFilters({
   categories,
   cities,
+  districts,
   defaultValues,
 }: {
   categories: Category[];
   cities: string[];
+  districts: string[];
   defaultValues: {
     category?: string;
     city?: string;
+    district?: string;
     type: string;
     minPrice?: string;
     maxPrice?: string;
@@ -208,6 +219,14 @@ export function SearchFilters({
     cityDirty.current = false;
     submit();
   }, [cityValue]);
+
+  const [districtValue, setDistrictValue] = useState(defaultValues.district ?? "");
+  const districtDirty = useRef(false);
+  useEffect(() => {
+    if (!districtDirty.current) return;
+    districtDirty.current = false;
+    submit();
+  }, [districtValue]);
 
   const grouped = new Map<string, Category[]>();
   for (const c of categories) {
@@ -267,15 +286,36 @@ export function SearchFilters({
         </FilterGroup>
 
         <FilterGroup title="Місто">
-          <CityDropdown
-            cities={cities}
+          <FilterDropdown
+            name="city"
+            options={cities}
             defaultValue={cityValue}
+            allLabel="Усі міста"
+            searchPlaceholder="Пошук міста..."
+            emptyLabel="Місто не знайдено"
             onSelect={(city) => {
               cityDirty.current = true;
               setCityValue(city);
             }}
           />
         </FilterGroup>
+
+        {districts.length > 0 && (
+          <FilterGroup title="Район">
+            <FilterDropdown
+              name="district"
+              options={districts}
+              defaultValue={districtValue}
+              allLabel="Усі райони"
+              searchPlaceholder="Пошук району..."
+              emptyLabel="Район не знайдено"
+              onSelect={(district) => {
+                districtDirty.current = true;
+                setDistrictValue(district);
+              }}
+            />
+          </FilterGroup>
+        )}
 
         <FilterGroup title="Тип">
           <div className="-mx-1">

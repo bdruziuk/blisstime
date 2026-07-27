@@ -221,6 +221,28 @@ export async function goToHoursStep() {
   redirect("/onboarding/hours");
 }
 
+/** Edit address/city/district after onboarding (working hours unchanged here). */
+export async function updateLocation(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const staff = await requireStaff();
+
+  const address = String(formData.get("address") || "").trim();
+  const city = String(formData.get("city") || "").trim();
+  const district = String(formData.get("district") || "").trim();
+  if (address.length < 3) return { error: "Вкажіть адресу" };
+  if (city.length < 2) return { error: "Вкажіть місто" };
+
+  await prisma.location.update({
+    where: { id: staff.locationId },
+    data: { address, city, district: district || null },
+  });
+
+  revalidatePath("/dashboard/settings");
+  return undefined;
+}
+
 export async function saveLocationAndFinish(
   _prevState: ActionState,
   formData: FormData
@@ -241,12 +263,13 @@ export async function saveLocationAndFinish(
   const parsed = locationSchema.safeParse({
     address: formData.get("address"),
     city: formData.get("city"),
+    district: formData.get("district") || undefined,
     hours,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message };
   }
-  const { address, city } = parsed.data;
+  const { address, city, district } = parsed.data;
 
   await prisma.$transaction(async (tx) => {
     const fullStaff = await tx.staff.findUniqueOrThrow({
@@ -254,7 +277,7 @@ export async function saveLocationAndFinish(
     });
     await tx.location.update({
       where: { id: fullStaff.locationId },
-      data: { address, city, workingHours: parsed.data.hours },
+      data: { address, city, district: district ?? null, workingHours: parsed.data.hours },
     });
     await tx.staff.update({
       where: { id: staff.id },

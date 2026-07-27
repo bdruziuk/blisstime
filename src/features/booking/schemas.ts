@@ -49,6 +49,7 @@ const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 export const locationSchema = z.object({
   address: z.string().trim().min(3, "Вкажіть адресу"),
   city: z.string().trim().min(2, "Вкажіть місто"),
+  district: z.string().trim().max(80).optional(),
   hours: z.record(
     z.enum(DAYS),
     z.object({

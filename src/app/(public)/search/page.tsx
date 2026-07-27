@@ -1,4 +1,5 @@
 import { Search as SearchIcon } from "lucide-react";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { SearchFilters } from "@/features/search/components/search-filters";
 import { MasterListingCard, type MasterListingItem } from "@/features/search/components/master-listing-card";
@@ -7,6 +8,7 @@ import { getRatingStatsForStaff } from "@/features/booking/rating";
 type SearchPageParams = {
   category?: string;
   city?: string;
+  district?: string;
   type?: string;
   minPrice?: string;
   maxPrice?: string;
@@ -19,9 +21,10 @@ export default async function SearchPage({
 }: {
   searchParams: Promise<SearchPageParams>;
 }) {
-  const { category, city, type, minPrice, maxPrice, minRating, sort } = await searchParams;
+  const { category, city, district, type, minPrice, maxPrice, minRating, sort } =
+    await searchParams;
 
-  const [categories, cityRows] = await Promise.all([
+  const [categories, cityRows, districtRows] = await Promise.all([
     prisma.serviceCategory.findMany({
       where: { parentId: { not: null } },
       include: { parent: true },
@@ -32,8 +35,19 @@ export default async function SearchPage({
       select: { city: true },
       distinct: ["city"],
     }),
+    // Districts to offer — narrowed to the chosen city so the list stays relevant.
+    prisma.location.findMany({
+      where: {
+        staff: { some: { onboardedAt: { not: null } } },
+        district: { not: null },
+        ...(city ? { city: { equals: city, mode: "insensitive" } } : {}),
+      },
+      select: { district: true },
+      distinct: ["district"],
+    }),
   ]);
   const cities = [...new Set(cityRows.map((r) => r.city).filter(Boolean))].sort();
+  const districts = [...new Set(districtRows.map((r) => r.district).filter((d): d is string => Boolean(d)))].sort();
 
   const minPriceCents = minPrice ? Math.round(Number(minPrice) * 100) : undefined;
   const maxPriceCents = maxPrice ? Math.round(Number(maxPrice) * 100) : undefined;
@@ -45,12 +59,18 @@ export default async function SearchPage({
     ...(maxPriceCents !== undefined ? { priceCents: { lte: maxPriceCents } } : {}),
   };
 
+  // Build a single location filter — separate `location:` spreads would
+  // overwrite each other, dropping the city filter when a type is also set.
+  const locationFilter: Prisma.LocationWhereInput = {};
+  if (city) locationFilter.city = { contains: city, mode: "insensitive" };
+  if (district) locationFilter.district = { equals: district, mode: "insensitive" };
+  if (type === "salon") locationFilter.organization = { type: "SALON" };
+  if (type === "solo") locationFilter.organization = { type: "SOLO" };
+
   const staffRows = await prisma.staff.findMany({
     where: {
       onboardedAt: { not: null },
-      ...(city ? { location: { city: { contains: city, mode: "insensitive" } } } : {}),
-      ...(type === "salon" ? { location: { organization: { type: "SALON" } } } : {}),
-      ...(type === "solo" ? { location: { organization: { type: "SOLO" } } } : {}),
+      ...(Object.keys(locationFilter).length ? { location: locationFilter } : {}),
       services: { some: serviceFilter },
     },
     include: {
@@ -112,9 +132,11 @@ export default async function SearchPage({
             parentName: c.parent?.name ?? "",
           }))}
           cities={cities}
+          districts={districts}
           defaultValues={{
             category,
             city,
+            district,
             type: type ?? "all",
             minPrice,
             maxPrice,
