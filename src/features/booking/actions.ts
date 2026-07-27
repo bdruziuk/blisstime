@@ -163,11 +163,21 @@ export async function addService(
       displayName,
       durationMinutes,
       priceCents: Math.round(price * 100),
+      rebookReminderWeeks: parseRebookWeeks(formData.get("rebookReminderWeeks")),
     },
   });
 
   revalidatePath("/onboarding/services");
   revalidatePath("/dashboard/services");
+}
+
+/** Reads the optional rebook-reminder interval; empty/invalid → null (no reminder). */
+function parseRebookWeeks(raw: FormDataEntryValue | null): number | null {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  const n = Math.round(Number(s));
+  if (!Number.isFinite(n) || n < 1) return null;
+  return Math.min(n, 104);
 }
 
 export async function updateService(
@@ -195,6 +205,7 @@ export async function updateService(
       displayName,
       durationMinutes,
       priceCents: Math.round(price * 100),
+      rebookReminderWeeks: parseRebookWeeks(formData.get("rebookReminderWeeks")),
     },
   });
   if (result.count === 0) {

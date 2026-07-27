@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { CheckCircle2, Clock3, Check } from "lucide-react";
+import { CheckCircle2, Clock3, Check, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,6 +106,22 @@ export function BookingWidget({
               : "Майстер підтвердить запис найближчим часом."
             : "Майстер зв'яжеться з вами за потреби."}
         </p>
+
+        {state.telegramDeepLink && (
+          <div className="mt-2 flex flex-col items-center gap-1.5">
+            <Button
+              render={<a href={state.telegramDeepLink} target="_blank" rel="noopener noreferrer" />}
+              nativeButton={false}
+              className="gap-2 rounded-full bg-[#229ED9] text-white hover:bg-[#1c8dc2]"
+            >
+              <Send className="size-4" />
+              Повідомити в Telegram
+            </Button>
+            <p className="text-muted-foreground max-w-xs text-xs">
+              Підтвердження запису, нагадування та запит відгуку — прямо в Telegram.
+            </p>
+          </div>
+        )}
       </div>
     );
   }

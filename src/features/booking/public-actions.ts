@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { bookingSchema } from "./schemas";
 import { normalizePhone } from "./phone";
@@ -8,11 +9,18 @@ import { insertBookingForClient, decideInitialBookingStatus } from "./create-boo
 import { expireStaleHolds } from "./expiry";
 import { getMedianResponseMinutes } from "./response-time";
 import { notifyMasterNewBooking } from "@/features/telegram/notify";
+import { BOT_USERNAME } from "@/lib/telegram";
 import type { BookableStatus } from "./create-booking";
 
 export type ActionState =
   | { error: string }
-  | { success: true; status: BookableStatus; medianResponseMinutes: number | null }
+  | {
+      success: true;
+      status: BookableStatus;
+      medianResponseMinutes: number | null;
+      // Deep link for the client to connect Telegram, or null if already linked.
+      telegramDeepLink: string | null;
+    }
   | undefined;
 
 export async function getAvailableSlots(
@@ -140,5 +148,14 @@ export async function createBooking(
   const medianResponseMinutes =
     result.status === "PENDING" ? await getMedianResponseMinutes(staffId) : null;
 
-  return { success: true, status: result.status, medianResponseMinutes };
+  // Offer a Telegram connect link unless this client is already linked.
+  let telegramDeepLink: string | null = null;
+  const client = await prisma.client.findUnique({ where: { phone } });
+  if (client && !client.telegramChatId) {
+    const token = `c_${randomUUID()}`;
+    await prisma.client.update({ where: { id: client.id }, data: { telegramLinkToken: token } });
+    telegramDeepLink = `https://t.me/${BOT_USERNAME}?start=${token}`;
+  }
+
+  return { success: true, status: result.status, medianResponseMinutes, telegramDeepLink };
 }

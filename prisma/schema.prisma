@@ -121,6 +121,9 @@ model StaffService {
   priceCents      Int
   durationMinutes Int
   isActive        Boolean @default(true)
+  // Weeks after a completed visit to nudge the client to rebook (Камбекер).
+  // Null = don't remind for this service.
+  rebookReminderWeeks Int?
 
   staff    Staff           @relation(fields: [staffId], references: [id], onDelete: Cascade)
   category ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -139,6 +142,8 @@ model Client {
   phone          String  @unique
   name           String?
   telegramChatId String?
+  // One-time secret in the t.me/<bot>?start=c_<token> deep link the client taps.
+  telegramLinkToken String? @unique
   notes          String?
 
   // Computed from no-shows / late cancellations.
@@ -179,8 +184,11 @@ model Booking {
   // When the master confirmed/declined — used for the response-time estimate.
   respondedAt   DateTime?
   cancelledAt   DateTime?
-  // Set once the 24h-before Telegram reminder has gone out (prevents repeats).
-  masterReminderSentAt DateTime?
+  // Timestamps marking that each Telegram nudge has gone out (prevents repeats).
+  masterReminderSentAt  DateTime?
+  clientReminder24SentAt DateTime?
+  clientReminder1SentAt  DateTime?
+  rebookReminderSentAt   DateTime?
 
   client  Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
   staff   Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { sendDueMasterReminders } from "@/features/telegram/reminders";
+import {
+  sendDueMasterReminders,
+  sendDueClientReminders,
+  sendDueRebookReminders,
+} from "@/features/telegram/reminders";
 
 // Triggered by a scheduler (e.g. Vercel Cron, hourly). Protected by a shared
 // secret so it can't be invoked by anyone. Configure CRON_SECRET in the env
@@ -18,8 +22,12 @@ async function run(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
-  const sent = await sendDueMasterReminders();
-  return NextResponse.json({ ok: true, sent });
+  const [master, client, rebook] = await Promise.all([
+    sendDueMasterReminders(),
+    sendDueClientReminders(),
+    sendDueRebookReminders(),
+  ]);
+  return NextResponse.json({ ok: true, master, client, rebook });
 }
 
 export async function GET(request: Request) {

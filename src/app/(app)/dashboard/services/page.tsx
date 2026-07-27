@@ -48,6 +48,7 @@ export default async function DashboardServicesPage() {
                     priceCents: s.priceCents,
                     durationMinutes: s.durationMinutes,
                     categoryId: s.categoryId,
+                    rebookReminderWeeks: s.rebookReminderWeeks,
                   }}
                   categories={categories}
                 />

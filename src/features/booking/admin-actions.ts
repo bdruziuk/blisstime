@@ -11,6 +11,15 @@ import { normalizePhone } from "./phone";
 import { insertBookingForClient } from "./create-booking";
 import { expireStaleHolds } from "./expiry";
 import { BUSINESS_TIMEZONE, getDayBoundsUTC } from "./slots";
+import { notifyClientBookingConfirmed, sendClientReviewRequest } from "@/features/telegram/notify";
+
+async function safeNotify(fn: () => Promise<void>) {
+  try {
+    await fn();
+  } catch (err) {
+    console.error("[telegram] client notify failed:", err);
+  }
+}
 
 export type ActionState = { error: string } | undefined;
 
@@ -36,11 +45,12 @@ async function requireStaff() {
 export async function confirmBooking(bookingId: string) {
   const staff = await requireStaff();
 
-  await prisma.booking.updateMany({
+  const { count } = await prisma.booking.updateMany({
     where: { id: bookingId, staffId: staff.id, status: "PENDING" },
     data: { status: "CONFIRMED", respondedAt: new Date(), holdExpiresAt: null },
   });
 
+  if (count > 0) await safeNotify(() => notifyClientBookingConfirmed(bookingId));
   revalidatePath("/dashboard/bookings");
 }
 
@@ -91,11 +101,12 @@ export async function cancelBooking(bookingId: string) {
 export async function markBookingCompleted(bookingId: string) {
   const staff = await requireStaff();
 
-  await prisma.booking.updateMany({
+  const { count } = await prisma.booking.updateMany({
     where: { id: bookingId, staffId: staff.id, status: "CONFIRMED" },
     data: { status: "COMPLETED" },
   });
 
+  if (count > 0) await safeNotify(() => sendClientReviewRequest(bookingId));
   revalidatePath("/dashboard/bookings");
 }
 

@@ -12,6 +12,7 @@ type ServiceItem = {
   priceCents: number;
   durationMinutes: number;
   categoryId: string;
+  rebookReminderWeeks: number | null;
 };
 
 export function EditableServiceRow({
@@ -41,6 +42,9 @@ export function EditableServiceRow({
         <span>
           {service.displayName} — {(service.priceCents / 100).toFixed(2)} грн,{" "}
           {service.durationMinutes} хв
+          {service.rebookReminderWeeks
+            ? ` · 🔔 нагадати через ${service.rebookReminderWeeks} тиж.`
+            : ""}
         </span>
         <div className="flex gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(true)}>
@@ -93,6 +97,17 @@ export function EditableServiceRow({
             className="flex-1"
           />
         </div>
+        <label className="text-muted-foreground flex flex-col gap-1 text-xs">
+          Нагадати про повторний візит через (тижнів, порожньо = не нагадувати)
+          <Input
+            name="rebookReminderWeeks"
+            type="number"
+            min={1}
+            max={104}
+            defaultValue={service.rebookReminderWeeks ?? ""}
+            placeholder="напр. 4"
+          />
+        </label>
         {state?.error && <p className="text-destructive text-xs">{state.error}</p>}
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={pending}>

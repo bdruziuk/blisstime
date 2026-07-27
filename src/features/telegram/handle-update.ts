@@ -47,6 +47,24 @@ async function handleMessage(chatId: number, text: string) {
       return;
     }
 
+    // Client link tokens are prefixed "c_"; anything else is a master token.
+    if (linkToken.startsWith("c_")) {
+      const client = await prisma.client.findUnique({ where: { telegramLinkToken: linkToken } });
+      if (!client) {
+        await tgSendMessage(chatId, "Посилання недійсне або застаріле.");
+        return;
+      }
+      await prisma.client.update({
+        where: { id: client.id },
+        data: { telegramChatId: String(chatId), telegramLinkToken: null },
+      });
+      await tgSendMessage(
+        chatId,
+        "✅ Готово! Тут ви отримаєте підтвердження запису, нагадування та запит відгуку."
+      );
+      return;
+    }
+
     const staff = await prisma.staff.findUnique({ where: { telegramLinkToken: linkToken } });
     if (!staff) {
       await tgSendMessage(chatId, "Посилання недійсне або застаріле. Згенеруйте нове в налаштуваннях.");
@@ -106,6 +124,13 @@ async function handleCallback(cb: NonNullable<TgUpdate["callback_query"]>) {
     });
     await tgAnswerCallbackQuery(cb.id, "Підтверджено ✅");
     await tgEditMessageText(chatId, messageId, `✅ <b>Підтверджено</b>\n${who} — ${when}`);
+    // Let the client know too (if they linked Telegram).
+    try {
+      const { notifyClientBookingConfirmed } = await import("./notify");
+      await notifyClientBookingConfirmed(booking.id);
+    } catch (err) {
+      console.error("[telegram] client confirm notify failed:", err);
+    }
   } else {
     await prisma.booking.updateMany({
       where: { id: booking.id, status: "PENDING" },
