@@ -12,6 +12,8 @@ import { MasterListingCard } from "@/features/search/components/master-listing-c
 import { SITE_URL } from "@/lib/site-url";
 
 export const revalidate = 3600;
+// Allow request-time rendering of any city/category not prebuilt.
+export const dynamicParams = true;
 
 type CatalogPageParams = { city: string; category: string };
 
@@ -25,15 +27,12 @@ async function resolveParams(params: Promise<CatalogPageParams>) {
 }
 
 export async function generateStaticParams() {
-  // Runs at build time, before the production DB is migrated on deploy — don't
-  // let an unreachable/empty DB fail the build. Pages render on-demand (ISR)
-  // once the DB is ready.
-  try {
-    const combos = await getCatalogCombos();
-    return combos.map((c) => ({ city: c.citySlug, category: c.categorySlug }));
-  } catch {
-    return [];
-  }
+  // Intentionally empty: on Railway the build runs BEFORE `prisma migrate
+  // deploy` (which happens at start), so the DB is always one migration behind
+  // and prerendering DB-backed pages here can hit columns that don't exist yet
+  // (P2022). Catalog pages render on-demand and cache via `revalidate`, so a
+  // crawler's first hit still gets full SSR HTML — no build-time DB dependency.
+  return [];
 }
 
 export async function generateMetadata({
