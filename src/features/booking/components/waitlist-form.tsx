@@ -62,11 +62,28 @@ export function WaitlistForm({ staffId, dateISO }: { staffId: string; dateISO: s
 
   return (
     <form action={formAction} className="flex flex-col gap-3 rounded-xl border p-4">
-      <p className="text-sm font-medium">
-        Повідомимо, якщо на {dateISO} звільниться час.
-      </p>
+      <p className="text-sm font-medium">Повідомимо, коли звільниться підходящий час.</p>
       <input type="hidden" name="staffId" value={staffId} />
-      <input type="hidden" name="dateISO" value={dateISO} />
+
+      <div className="flex flex-col gap-1.5">
+        <Label>Бажані дати</Label>
+        <div className="flex items-center gap-2">
+          <Input type="date" name="dateFrom" defaultValue={dateISO} min={dateISO} required className="flex-1" />
+          <span className="text-muted-foreground">—</span>
+          <Input type="date" name="dateTo" defaultValue={dateISO} min={dateISO} required className="flex-1" />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label>Час (необов&apos;язково)</Label>
+        <div className="flex items-center gap-2">
+          <Input type="time" name="timeFrom" className="flex-1" />
+          <span className="text-muted-foreground">—</span>
+          <Input type="time" name="timeTo" className="flex-1" />
+        </div>
+        <p className="text-muted-foreground text-xs">Порожньо — будь-який час дня.</p>
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="wl-name">Ваше ім&apos;я</Label>
         <Input id="wl-name" name="clientName" required />

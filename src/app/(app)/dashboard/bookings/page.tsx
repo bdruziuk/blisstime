@@ -114,6 +114,22 @@ async function WaitlistSummary({ staffId }: { staffId: string }) {
     day: "numeric",
     month: "long",
   });
+  const timeFmt = new Intl.DateTimeFormat("uk-UA", {
+    timeZone: BUSINESS_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const dayKey = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: BUSINESS_TIMEZONE }).format(d);
+  // "10 серпня", "10 серпня, 14:00–18:00", or "10–12 серпня" for a multi-day span.
+  const rangeLabel = (from: Date, to: Date): string => {
+    const sameDay = dayKey(from) === dayKey(to);
+    if (!sameDay) return `${dayFmt.format(from)} — ${dayFmt.format(to)}`;
+    const t1 = timeFmt.format(from);
+    const t2 = timeFmt.format(to);
+    const wholeDay = t1 === "00:00" && (t2 === "23:59" || t2 === "00:00");
+    return wholeDay ? dayFmt.format(from) : `${dayFmt.format(from)}, ${t1}–${t2}`;
+  };
 
   return (
     <div className="border-border bg-card rounded-xl border p-4">
@@ -123,7 +139,7 @@ async function WaitlistSummary({ staffId }: { staffId: string }) {
           <li key={e.id} className="flex items-center justify-between gap-2">
             <span>{e.client.name ?? e.client.phone}</span>
             <span className="text-muted-foreground text-xs">
-              {dayFmt.format(e.desiredFrom)}
+              {rangeLabel(e.desiredFrom, e.desiredTo)}
               {e.client.telegramChatId ? "" : " · без Telegram"}
             </span>
           </li>
