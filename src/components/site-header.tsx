@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Sparkles, CalendarDays, Settings, LogOut, LayoutDashboard, Scissors } from "lucide-react";
+import { Sparkles, CalendarDays, Settings, LogOut, LayoutDashboard, Scissors, Users } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Кабінет", icon: LayoutDashboard },
   { href: "/dashboard/bookings", label: "Записи", icon: CalendarDays },
+  { href: "/dashboard/clients", label: "Клієнти", icon: Users },
   { href: "/dashboard/services", label: "Послуги", icon: Scissors },
   { href: "/dashboard/settings", label: "Налаштування", icon: Settings },
 ];

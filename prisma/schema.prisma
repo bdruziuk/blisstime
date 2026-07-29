@@ -93,6 +93,7 @@ model Staff {
   bookings        Booking[]
   waitlistEntries WaitlistEntry[]
   scheduleBlocks  ScheduleBlock[]
+  clientNotes     ClientNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -153,9 +154,27 @@ model Client {
 
   bookings        Booking[]
   waitlistEntries WaitlistEntry[]
+  clientNotes     ClientNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A master's private note about a client — per (staff, client), so notes never
+// leak across masters who happen to share a client (by phone).
+model ClientNote {
+  id       String @id @default(cuid())
+  staffId  String
+  clientId String
+  body     String
+
+  staff  Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([staffId, clientId])
 }
 
 // Overlap prevention (a staff member cannot have two overlapping bookings,
