@@ -30,6 +30,8 @@ type BookingItem = {
   serviceIds: string[];
   serviceName: string;
   durationMinutes: number;
+  reliabilityScore: number;
+  prepaymentAdvice: string | null;
 };
 
 type ServiceItem = {
@@ -188,6 +190,11 @@ function BookingRow({ staffId, booking }: { staffId: string; booking: BookingIte
               <> · хол ще {minutesLeft} хв</>
             )}
           </div>
+          {booking.status === "PENDING" && booking.prepaymentAdvice && (
+            <p className="text-destructive/90 mt-1 text-xs">
+              ⚠️ {booking.prepaymentAdvice} (надійність {booking.reliabilityScore})
+            </p>
+          )}
         </div>
         {booking.status === "PENDING" && (
           <div className="flex gap-2">

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getClientDetail } from "@/features/crm/queries";
 import { ClientNoteForm } from "@/features/crm/components/client-note-form";
 import { BUSINESS_TIMEZONE } from "@/features/booking/slots";
+import { getPrepaymentAdvice } from "@/features/booking/reliability";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Очікує",
@@ -43,6 +44,13 @@ export default async function ClientDetailPage({
   const client = await getClientDetail(staff.id, clientId);
   if (!client) notFound();
 
+  const completedVisits = client.visits.filter((v) => v.status === "COMPLETED").length;
+  const advice = getPrepaymentAdvice({
+    reliabilityScore: client.reliabilityScore,
+    noShowCount: client.noShowCount,
+    isNewClient: completedVisits === 0,
+  });
+
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10">
       <Link
@@ -76,6 +84,18 @@ export default async function ClientDetailPage({
           )}
         </div>
       </div>
+
+      {advice.message && (
+        <div
+          className={`rounded-xl border p-3 text-sm ${
+            advice.level === "risky"
+              ? "border-destructive/40 bg-destructive/5 text-destructive"
+              : "border-border bg-accent/40 text-foreground"
+          }`}
+        >
+          ⚠️ {advice.message}
+        </div>
+      )}
 
       <Card>
         <CardHeader>

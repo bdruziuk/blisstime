@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { tgSendMessage, type InlineButton } from "@/lib/telegram";
 import { formatBookingWhen, escapeHtml } from "./handle-update";
+import { getPrepaymentAdvice } from "@/features/booking/reliability";
 
 const APP_URL = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
@@ -37,11 +38,23 @@ export async function notifyMasterNewBooking(bookingId: string): Promise<void> {
       : booking.service.displayName;
 
   if (booking.status === "PENDING") {
+    // Reliability + prepayment advice to help the master decide.
+    const priorCompleted = await prisma.booking.count({
+      where: { staffId: booking.staffId, clientId: booking.clientId, status: "COMPLETED" },
+    });
+    const advice = getPrepaymentAdvice({
+      reliabilityScore: booking.client.reliabilityScore,
+      noShowCount: booking.client.noShowCount,
+      isNewClient: priorCompleted === 0,
+    });
+    const adviceLine = advice.message ? `\n⚠️ ${escapeHtml(advice.message)}` : "";
+
     const text =
       `🆕 <b>Нова заявка</b>\n` +
       `${who} (${phone})\n` +
       `${escapeHtml(serviceNames)}\n` +
-      `🕐 ${when}`;
+      `🕐 ${when}\n` +
+      `Надійність клієнта: ${booking.client.reliabilityScore}${adviceLine}`;
     const keyboard: InlineButton[][] = [
       [
         { text: "✅ Підтвердити", callback_data: `confirm:${booking.id}` },

@@ -12,6 +12,7 @@ import {
   shiftMonthISO,
 } from "@/features/booking/calendar-ranges";
 import { expireStaleHolds } from "@/features/booking/expiry";
+import { getPrepaymentAdvice } from "@/features/booking/reliability";
 import { AdminBookingsPanel } from "@/features/booking/components/admin-bookings-panel";
 import { BookingsViewSwitcher, type BookingsView } from "@/features/booking/components/bookings-view-switcher";
 import { BookingsListView } from "@/features/booking/components/bookings-list-view";
@@ -254,6 +255,15 @@ async function BookingsDayContent({ staffId, dateISO }: { staffId: string; dateI
     prisma.staffService.findMany({ where: { staffId, isActive: true } }),
   ]);
 
+  // Which of the day's clients are returning (have a completed visit here)?
+  const dayClientIds = [...new Set(bookings.map((b) => b.clientId))];
+  const returning = await prisma.booking.findMany({
+    where: { staffId, clientId: { in: dayClientIds }, status: "COMPLETED" },
+    select: { clientId: true },
+    distinct: ["clientId"],
+  });
+  const returningIds = new Set(returning.map((r) => r.clientId));
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3 text-sm">
@@ -287,6 +297,12 @@ async function BookingsDayContent({ staffId, dateISO }: { staffId: string; dateI
           serviceIds: serviceIdsOf(b),
           serviceName: serviceLabel(b),
           durationMinutes: Math.round((b.slotEnd.getTime() - b.slotStart.getTime()) / 60_000),
+          reliabilityScore: b.client.reliabilityScore,
+          prepaymentAdvice: getPrepaymentAdvice({
+            reliabilityScore: b.client.reliabilityScore,
+            noShowCount: b.client.noShowCount,
+            isNewClient: !returningIds.has(b.clientId),
+          }).message,
         }))}
         services={services.map((s) => ({
           id: s.id,

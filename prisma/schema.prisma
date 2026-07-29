@@ -32,12 +32,6 @@ enum ConfirmationMode {
   AUTO_TRUSTED
 }
 
-enum PrepaymentStatus {
-  PENDING
-  PAID
-  FAILED
-  REFUNDED
-}
 
 model Organization {
   id        String           @id @default(cuid())
@@ -214,7 +208,6 @@ model Booking {
   service StaffService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
   services   BookingService[]
-  prepayment Prepayment?
   review     Review?
 
   createdAt DateTime @default(now())
@@ -235,19 +228,6 @@ model BookingService {
 
   @@unique([bookingId, serviceId])
   @@index([serviceId])
-}
-
-model Prepayment {
-  id            String           @id @default(cuid())
-  bookingId     String           @unique
-  amountCents   Int
-  liqpayOrderId String?
-  status        PrepaymentStatus @default(PENDING)
-
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 // Only allowed when booking.status = COMPLETED; enforced in app logic.
