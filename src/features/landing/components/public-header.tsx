@@ -48,13 +48,10 @@ export function PublicHeader() {
                     key={v.slug}
                     href="/search"
                     onClick={() => setServicesOpen(false)}
-                    className="hover:bg-accent/60 flex items-start gap-2.5 rounded-lg px-2.5 py-2"
+                    className="hover:bg-accent/60 block rounded-lg px-2.5 py-2"
                   >
-                    <span className="text-lg leading-none">{v.emoji}</span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold">{v.name}</span>
-                      <span className="text-muted-foreground block text-xs">{v.blurb}</span>
-                    </span>
+                    <span className="block text-sm font-semibold">{v.name}</span>
+                    <span className="text-muted-foreground block text-xs">{v.blurb}</span>
                   </Link>
                 ))}
               </div>
@@ -117,9 +114,8 @@ export function PublicHeader() {
                 key={v.slug}
                 href="/search"
                 onClick={() => setMobileOpen(false)}
-                className="hover:bg-accent/60 flex items-center gap-2 rounded-lg px-2 py-2 text-sm"
+                className="hover:bg-accent/60 rounded-lg px-2 py-2 text-sm"
               >
-                <span>{v.emoji}</span>
                 {v.name}
               </Link>
             ))}
