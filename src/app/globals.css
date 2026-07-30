@@ -58,9 +58,9 @@
   --card-foreground: #1F2937;
   --popover: #FFFFFF;
   --popover-foreground: #1F2937;
-  --primary: #C9A46B;
+  --primary: oklch(0.56 0.135 35);
   --primary-foreground: #FFFFFF;
-  --primary-hover: #B58A4F;
+  --primary-hover: oklch(0.5 0.145 35);
   --secondary: #FFFFFF;
   --secondary-foreground: #1F2937;
   --muted: #F3F4F6;
@@ -71,8 +71,8 @@
   --destructive: #E53935;
   --border: #E5E7EB;
   --input: #E5E7EB;
-  --ring: #C9A46B;
-  --chart-1: #C9A46B;
+  --ring: oklch(0.56 0.135 35);
+  --chart-1: oklch(0.56 0.135 35);
   --chart-2: #4CAF50;
   --chart-3: #B58A4F;
   --chart-4: #6B7280;
@@ -80,12 +80,12 @@
   --radius: 0.875rem;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #1F2937;
-  --sidebar-primary: #C9A46B;
+  --sidebar-primary: oklch(0.56 0.135 35);
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #F5EFE4;
   --sidebar-accent-foreground: #1F2937;
   --sidebar-border: #E5E7EB;
-  --sidebar-ring: #C9A46B;
+  --sidebar-ring: oklch(0.56 0.135 35);
 }
 
 .dark {
