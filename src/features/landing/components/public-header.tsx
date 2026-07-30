@@ -46,7 +46,7 @@ export function PublicHeader() {
                 {VERTICALS.map((v) => (
                   <Link
                     key={v.slug}
-                    href="/search"
+                    href={`/search?category=${v.slug}`}
                     onClick={() => setServicesOpen(false)}
                     className="hover:bg-accent/60 block rounded-lg px-2.5 py-2"
                   >
@@ -112,7 +112,7 @@ export function PublicHeader() {
             {VERTICALS.map((v) => (
               <Link
                 key={v.slug}
-                href="/search"
+                href={`/search?category=${v.slug}`}
                 onClick={() => setMobileOpen(false)}
                 className="hover:bg-accent/60 rounded-lg px-2 py-2 text-sm"
               >

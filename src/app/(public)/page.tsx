@@ -154,7 +154,7 @@ export default async function HomePage() {
             return (
               <Link
                 key={v.slug}
-                href="/search"
+                href={`/search?category=${v.slug}`}
                 className="border-border hover:border-primary card-hover flex flex-col gap-1.5 rounded-2xl border p-4"
               >
                 <span className="text-2xl">{v.emoji}</span>

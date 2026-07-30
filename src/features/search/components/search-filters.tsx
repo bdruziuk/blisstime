@@ -6,7 +6,7 @@ import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type Category = { id: string; name: string; parentName: string };
+type Category = { slug: string; name: string };
 
 const SORT_OPTIONS = [
   { value: "default", label: "За замовчуванням" },
@@ -228,13 +228,6 @@ export function SearchFilters({
     submit();
   }, [districtValue]);
 
-  const grouped = new Map<string, Category[]>();
-  for (const c of categories) {
-    const list = grouped.get(c.parentName) ?? [];
-    list.push(c);
-    grouped.set(c.parentName, list);
-  }
-
   const selectedCategory = defaultValues.category ?? "";
   const selectedRating = defaultValues.minRating ?? "";
 
@@ -265,22 +258,15 @@ export function SearchFilters({
               checked={selectedCategory === ""}
               onChange={submit}
             />
-            {[...grouped.entries()].map(([parentName, items]) => (
-              <div key={parentName} className="mt-1.5">
-                <p className="text-muted-foreground px-2 pt-1 pb-0.5 text-xs font-medium">
-                  {parentName}
-                </p>
-                {items.map((c) => (
-                  <RadioRow
-                    key={c.id}
-                    name="category"
-                    value={c.id}
-                    label={c.name}
-                    checked={selectedCategory === c.id}
-                    onChange={submit}
-                  />
-                ))}
-              </div>
+            {categories.map((c) => (
+              <RadioRow
+                key={c.slug}
+                name="category"
+                value={c.slug}
+                label={c.name}
+                checked={selectedCategory === c.slug}
+                onChange={submit}
+              />
             ))}
           </div>
         </FilterGroup>

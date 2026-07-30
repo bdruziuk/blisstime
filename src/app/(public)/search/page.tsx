@@ -25,10 +25,11 @@ export default async function SearchPage({
     await searchParams;
 
   const [categories, cityRows, districtRows] = await Promise.all([
+    // Top-level verticals (services attach to their leaves); "misc" is hidden.
     prisma.serviceCategory.findMany({
-      where: { parentId: { not: null } },
-      include: { parent: true },
+      where: { parentId: null, slug: { not: "misc" } },
       orderBy: { name: "asc" },
+      select: { slug: true, name: true },
     }),
     prisma.location.findMany({
       where: { staff: { some: { onboardedAt: { not: null } } } },
@@ -52,9 +53,13 @@ export default async function SearchPage({
   const minPriceCents = minPrice ? Math.round(Number(minPrice) * 100) : undefined;
   const maxPriceCents = maxPrice ? Math.round(Number(maxPrice) * 100) : undefined;
 
-  const serviceFilter = {
+  // `category` is a top-level vertical slug; match services whose (leaf)
+  // category is that vertical or sits under it.
+  const serviceFilter: Prisma.StaffServiceWhereInput = {
     isActive: true,
-    ...(category ? { categoryId: category } : {}),
+    ...(category
+      ? { category: { OR: [{ slug: category }, { parent: { slug: category } }] } }
+      : {}),
     ...(minPriceCents !== undefined ? { priceCents: { gte: minPriceCents } } : {}),
     ...(maxPriceCents !== undefined ? { priceCents: { lte: maxPriceCents } } : {}),
   };
@@ -126,11 +131,7 @@ export default async function SearchPage({
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <SearchFilters
-          categories={categories.map((c) => ({
-            id: c.id,
-            name: c.name,
-            parentName: c.parent?.name ?? "",
-          }))}
+          categories={categories.map((c) => ({ slug: c.slug, name: c.name }))}
           cities={cities}
           districts={districts}
           defaultValues={{
