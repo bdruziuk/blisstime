@@ -19,7 +19,7 @@ export async function SiteHeader() {
       <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
         <Link href="/dashboard" className="font-heading flex items-center gap-1.5 text-lg font-bold">
           <Sparkles className="text-primary size-5" strokeWidth={2.25} />
-          BlissTime
+          EasyService
         </Link>
         <nav className="flex items-center gap-1 text-sm">
           {NAV_LINKS.map((link) => (

@@ -43,7 +43,7 @@ export async function generateMetadata({
   const { citySlug, categorySlug, city, category } = await resolveParams(params);
   if (!city || !category) return {};
 
-  const title = `${category.name} у місті ${city} — майстри та ціни | BlissTime`;
+  const title = `${category.name} у місті ${city} — майстри та ціни | EasyService`;
   const description = `Оберіть майстра послуги «${category.name}» у місті ${city}: ціни, відгуки, вільні слоти. Запис онлайн за 10 секунд, без дзвінків.`;
   const url = `${SITE_URL}/${citySlug}/${categorySlug}`;
 
@@ -51,7 +51,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: url },
-    openGraph: { title, description, url, siteName: "BlissTime", locale: "uk_UA", type: "website" },
+    openGraph: { title, description, url, siteName: "EasyService", locale: "uk_UA", type: "website" },
   };
 }
 

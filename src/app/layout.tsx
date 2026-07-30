@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BlissTime",
-  description: "Букінг та CRM для майстрів і салонів краси",
+  title: "EasyService",
+  description: "Маркетплейс послуг та легка CRM для майстрів і салонів краси",
 };
 
 export default function RootLayout({

@@ -15,7 +15,7 @@ export default function LoginPage() {
         className="font-heading relative flex items-center gap-1.5 text-2xl font-bold"
       >
         <Sparkles className="text-primary size-6" strokeWidth={2.25} />
-        BlissTime
+        EasyService
       </Link>
       <Card className="relative w-full max-w-sm shadow-lg">
         <CardHeader>

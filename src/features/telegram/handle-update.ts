@@ -42,7 +42,7 @@ async function handleMessage(chatId: number, text: string) {
     if (!linkToken) {
       await tgSendMessage(
         chatId,
-        "Вітаємо! Щоб підключити кабінет, натисніть кнопку «Підключити Telegram» у налаштуваннях BlissTime."
+        "Вітаємо! Щоб підключити кабінет, натисніть кнопку «Підключити Telegram» у налаштуваннях EasyService."
       );
       return;
     }
@@ -83,7 +83,7 @@ async function handleMessage(chatId: number, text: string) {
     return;
   }
 
-  await tgSendMessage(chatId, "Я надсилаю заявки на запис і нагадування. Керуйте кабінетом у BlissTime.");
+  await tgSendMessage(chatId, "Я надсилаю заявки на запис і нагадування. Керуйте кабінетом у EasyService.");
 }
 
 async function handleCallback(cb: NonNullable<TgUpdate["callback_query"]>) {

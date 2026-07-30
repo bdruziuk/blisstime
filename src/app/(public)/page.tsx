@@ -35,7 +35,7 @@ export default async function HomePage() {
             <br className="hidden sm:block" /> без дзвінків і застосунків
           </h1>
           <p className="text-muted-foreground max-w-xl text-lg text-balance">
-            BlissTime — кабінет для соло-майстрів і невеликих команд краси: клієнти записуються
+            EasyService — кабінет для соло-майстрів і невеликих команд краси: клієнти записуються
             самі, а ви керуєте розкладом в одному місці.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
