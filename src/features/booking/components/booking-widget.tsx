@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { CheckCircle2, Clock3, Check, Send } from "lucide-react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, Clock3, Check, Send, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,15 +22,17 @@ type ServiceItem = {
 
 type SlotOption = { startISO: string; endISO: string };
 
+const BUSINESS_TZ = "Europe/Kyiv";
+
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: BUSINESS_TZ }).format(new Date());
 }
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("uk-UA", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Europe/Kyiv",
+    timeZone: BUSINESS_TZ,
   });
 }
 
@@ -41,6 +43,96 @@ function StepLabel({ n, children }: { n: number; children: React.ReactNode }) {
         {n}
       </span>
       <p className="text-sm font-semibold">{children}</p>
+    </div>
+  );
+}
+
+const DATE_WINDOW_DAYS = 30;
+const WEEKDAY_FMT = new Intl.DateTimeFormat("uk-UA", { weekday: "short", timeZone: BUSINESS_TZ });
+const MONTH_FMT = new Intl.DateTimeFormat("uk-UA", { month: "short", timeZone: BUSINESS_TZ });
+
+/** Local (business-timezone) YYYY-MM-DD for a date — avoids UTC off-by-one. */
+function localISO(d: Date) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: BUSINESS_TZ }).format(d);
+}
+
+/** The next N bookable days, starting today. */
+function buildDateStrip(days = DATE_WINDOW_DAYS) {
+  const out: { iso: string; day: string; weekday: string; month: string }[] = [];
+  const base = new Date();
+  for (let i = 0; i < days; i++) {
+    const d = new Date(base);
+    d.setDate(base.getDate() + i);
+    out.push({
+      iso: localISO(d),
+      day: String(d.getDate()),
+      weekday: WEEKDAY_FMT.format(d).replace(".", ""),
+      month: MONTH_FMT.format(d).replace(".", ""),
+    });
+  }
+  return out;
+}
+
+/** Horizontal scrollable date strip replacing the native date input. */
+function DateCarousel({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (iso: string) => void;
+}) {
+  const dates = useMemo(() => buildDateStrip(), []);
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  function scrollBy(direction: -1 | 1) {
+    scrollerRef.current?.scrollBy({ left: direction * 220, behavior: "smooth" });
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => scrollBy(-1)}
+        aria-label="Попередні дати"
+        className="border-border text-muted-foreground hover:border-primary hover:text-primary hidden size-8 shrink-0 items-center justify-center rounded-full border sm:flex"
+      >
+        <ChevronLeft className="size-4" />
+      </button>
+
+      <div
+        ref={scrollerRef}
+        className="flex flex-1 gap-2 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {dates.map((d, i) => {
+          const selected = d.iso === value;
+          return (
+            <button
+              key={d.iso}
+              type="button"
+              onClick={() => onChange(d.iso)}
+              aria-pressed={selected}
+              className={`flex w-14 shrink-0 flex-col items-center gap-0.5 rounded-xl border px-2 py-2 transition-all ${
+                selected
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border hover:border-primary/40 hover:bg-accent/40"
+              }`}
+            >
+              <span className="text-[0.65rem] uppercase opacity-75">{d.weekday}</span>
+              <span className="font-heading text-lg leading-none font-bold">{d.day}</span>
+              <span className="text-[0.65rem] opacity-75">{i === 0 ? "сьогодні" : d.month}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => scrollBy(1)}
+        aria-label="Наступні дати"
+        className="border-border text-muted-foreground hover:border-primary hover:text-primary hidden size-8 shrink-0 items-center justify-center rounded-full border sm:flex"
+      >
+        <ChevronRight className="size-4" />
+      </button>
     </div>
   );
 }
@@ -186,13 +278,7 @@ export function BookingWidget({
       {hasSelection && (
         <div className="flex flex-col gap-3 border-t pt-5">
           <StepLabel n={2}>Оберіть дату і час</StepLabel>
-          <Input
-            type="date"
-            value={date}
-            min={todayISO()}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-48"
-          />
+          <DateCarousel value={date} onChange={setDate} />
 
           {loadingSlots && <p className="text-muted-foreground text-sm">Завантаження...</p>}
 
