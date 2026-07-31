@@ -11,26 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { WhyUs } from "@/features/landing/components/WhyUs";
 import { VERTICALS } from "@/features/landing/verticals";
-import {
-  getVerticalCounts,
-  getLandingStats,
-  type LandingStats,
-} from "@/features/landing/queries";
+import { getVerticalCounts } from "@/features/landing/queries";
 
 // ISR — the build never depends on the DB (queries degrade to empty).
 export const revalidate = 3600;
 
-type LandingData = {
-  counts: Map<string, number>;
-  stats: LandingStats;
-};
-
-async function loadLanding(): Promise<LandingData> {
+async function loadVerticalCounts(): Promise<Map<string, number>> {
   try {
-    const [counts, stats] = await Promise.all([getVerticalCounts(), getLandingStats()]);
-    return { counts, stats };
+    return await getVerticalCounts();
   } catch {
-    return { counts: new Map(), stats: { masters: 0, completedBookings: 0, cities: 0 } };
+    return new Map();
   }
 }
 
@@ -53,13 +43,7 @@ const HOW_IT_WORKS = [
 ];
 
 export default async function HomePage() {
-  const { counts, stats } = await loadLanding();
-
-  const statTiles = [
-    stats.masters > 0 ? { value: stats.masters, label: "майстрів на платформі" } : null,
-    stats.completedBookings > 0 ? { value: stats.completedBookings, label: "виконаних записів" } : null,
-    stats.cities > 0 ? { value: stats.cities, label: "міст" } : null,
-  ].filter((t): t is { value: number; label: string } => t !== null);
+  const counts = await loadVerticalCounts();
 
   return (
     <main className="flex flex-col">
@@ -100,8 +84,7 @@ export default async function HomePage() {
             <div className="border-primary/30 bg-accent/30 flex flex-col gap-3 rounded-2xl border p-5 shadow-sm">
               <p className="text-sm font-semibold">Маю справу</p>
               <p className="text-muted-foreground text-sm">
-                Вставите прайс — ШІ збере ваш кабінет за секунди. Перші 30 записів щомісяця
-                безкоштовні.
+                Вставите прайс — ШІ збере ваш кабінет за секунди. Користування — безкоштовне.
               </p>
               <Button
                 render={<Link href="/register" />}
@@ -169,22 +152,6 @@ export default async function HomePage() {
 
       <WhyUs />
 
-      {/* Block 5 — Social proof (real stats only) */}
-      {statTiles.length > 0 && (
-        <section className="bg-accent/20 border-y">
-          <div className="mx-auto w-full max-w-5xl px-6 py-16">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {statTiles.map((t) => (
-                <div key={t.label} className="text-center">
-                  <div className="font-heading text-primary text-3xl font-bold">{t.value}</div>
-                  <div className="text-muted-foreground text-sm">{t.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* Block 6 — Final CTA */}
       <section className="mx-auto w-full max-w-3xl px-6 py-20 text-center">
         <div className="from-primary to-primary/85 text-primary-foreground flex flex-col items-center gap-4 rounded-3xl bg-gradient-to-b p-10 shadow-lg">
@@ -192,7 +159,7 @@ export default async function HomePage() {
             Спробуйте EasyService безкоштовно
           </h2>
           <p className="max-w-lg text-balance opacity-90">
-            Перші 30 записів щомісяця — назавжди безкоштовні. Карта не потрібна.
+            Користування платформою безкоштовне. Карта не потрібна.
           </p>
           <Button
             render={<Link href="/register" />}
