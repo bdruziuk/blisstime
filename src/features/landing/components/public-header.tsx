@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Sparkles, ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import { VERTICALS } from "@/features/landing/verticals";
 
 export function PublicHeader() {
@@ -25,9 +26,8 @@ export function PublicHeader() {
   return (
     <header className="border-border bg-background/80 sticky top-0 z-40 border-b backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
-        <Link href="/" className="font-heading flex items-center gap-1.5 text-lg font-bold">
-          <Sparkles className="text-primary size-5" strokeWidth={2.25} />
-          EasyService
+        <Link href="/">
+          <Logo className="text-lg" />
         </Link>
 
         {/* Desktop nav */}

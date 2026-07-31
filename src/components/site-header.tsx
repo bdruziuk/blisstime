@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Sparkles, CalendarDays, Settings, LogOut, LayoutDashboard, Scissors, Users, Wallet } from "lucide-react";
+import { CalendarDays, Settings, LogOut, LayoutDashboard, Scissors, Users, Wallet } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
+import { Logo } from "@/components/logo";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Кабінет", icon: LayoutDashboard },
@@ -17,9 +18,8 @@ export async function SiteHeader() {
   return (
     <header className="border-border bg-card/70 sticky top-0 z-10 border-b backdrop-blur-md">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-        <Link href="/dashboard" className="font-heading flex items-center gap-1.5 text-lg font-bold">
-          <Sparkles className="text-primary size-5" strokeWidth={2.25} />
-          EasyService
+        <Link href="/dashboard">
+          <Logo className="text-lg" />
         </Link>
         <nav className="flex items-center gap-1 text-sm">
           {NAV_LINKS.map((link) => (

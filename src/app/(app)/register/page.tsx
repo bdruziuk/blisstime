@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RegisterForm } from "@/features/booking/components/register-form";
+import { Logo } from "@/components/logo";
 
 export default function RegisterPage() {
   return (
@@ -10,12 +10,8 @@ export default function RegisterPage() {
         aria-hidden
         className="from-accent/60 via-background to-background pointer-events-none absolute inset-0 bg-gradient-to-b"
       />
-      <Link
-        href="/"
-        className="font-heading relative flex items-center gap-1.5 text-2xl font-bold"
-      >
-        <Sparkles className="text-primary size-6" strokeWidth={2.25} />
-        EasyService
+      <Link href="/" className="relative">
+        <Logo className="text-2xl" />
       </Link>
       <Card className="relative w-full max-w-sm shadow-lg">
         <CardHeader>
