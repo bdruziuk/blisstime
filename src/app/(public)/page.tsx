@@ -6,9 +6,6 @@ import {
   Wand2,
   CalendarCheck,
   MessageCircle,
-  Star,
-  MapPin,
-  Map as MapIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +13,7 @@ import { WhyUs } from "@/features/landing/components/WhyUs";
 import { VERTICALS } from "@/features/landing/verticals";
 import {
   getVerticalCounts,
-  getTopMasters,
-  getRecentReviews,
   getLandingStats,
-  type TopMaster,
-  type LandingReview,
   type LandingStats,
 } from "@/features/landing/queries";
 
@@ -29,22 +22,15 @@ export const revalidate = 3600;
 
 type LandingData = {
   counts: Map<string, number>;
-  topMasters: TopMaster[];
-  reviews: LandingReview[];
   stats: LandingStats;
 };
 
 async function loadLanding(): Promise<LandingData> {
   try {
-    const [counts, topMasters, reviews, stats] = await Promise.all([
-      getVerticalCounts(),
-      getTopMasters(6),
-      getRecentReviews(8),
-      getLandingStats(),
-    ]);
-    return { counts, topMasters, reviews, stats };
+    const [counts, stats] = await Promise.all([getVerticalCounts(), getLandingStats()]);
+    return { counts, stats };
   } catch {
-    return { counts: new Map(), topMasters: [], reviews: [], stats: { masters: 0, completedBookings: 0, cities: 0 } };
+    return { counts: new Map(), stats: { masters: 0, completedBookings: 0, cities: 0 } };
   }
 }
 
@@ -66,21 +52,8 @@ const HOW_IT_WORKS = [
   },
 ];
 
-function Stars({ rating }: { rating: number }) {
-  return (
-    <span className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          className={n <= rating ? "fill-primary text-primary size-3.5" : "text-muted-foreground/40 size-3.5"}
-        />
-      ))}
-    </span>
-  );
-}
-
 export default async function HomePage() {
-  const { counts, topMasters, reviews, stats } = await loadLanding();
+  const { counts, stats } = await loadLanding();
 
   const statTiles = [
     stats.masters > 0 ? { value: stats.masters, label: "майстрів на платформі" } : null,
@@ -196,83 +169,18 @@ export default async function HomePage() {
 
       <WhyUs />
 
-      {/* Block 4 — Top masters + map */}
-      {topMasters.length > 0 && (
-        <section className="mx-auto w-full max-w-5xl px-6 py-16">
-          <h2 className="font-heading mb-6 text-center text-2xl font-bold sm:text-3xl">
-            ТОП-майстри
-          </h2>
-          <div className="grid gap-4 lg:grid-cols-3">
-            <div className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
-              {topMasters.map((m) => (
-                <Link
-                  key={m.username}
-                  href={`/@${m.username}`}
-                  className="border-border hover:border-primary card-hover flex flex-col gap-1.5 rounded-2xl border p-4"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-heading truncate font-bold">{m.displayName}</span>
-                    <span className="flex shrink-0 items-center gap-1 text-sm font-semibold">
-                      <Star className="fill-primary text-primary size-4" />
-                      {m.avgRating.toFixed(1)}
-                    </span>
-                  </div>
-                  <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                    <MapPin className="size-3.5" />
-                    {m.city}
-                  </p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {m.categoryNames.join(" · ")}
-                  </p>
-                </Link>
-              ))}
-            </div>
-            {/* Map placeholder — real Google Maps once an API key is configured. */}
-            <div className="border-border bg-accent/20 flex min-h-48 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed p-6 text-center">
-              <MapIcon className="text-muted-foreground size-8" />
-              <p className="text-sm font-medium">Інтерактивна мапа</p>
-              <p className="text-muted-foreground text-xs">Незабаром: майстри поблизу на карті</p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Block 5 — Social proof */}
-      {(reviews.length > 0 || statTiles.length > 0) && (
+      {/* Block 5 — Social proof (real stats only) */}
+      {statTiles.length > 0 && (
         <section className="bg-accent/20 border-y">
           <div className="mx-auto w-full max-w-5xl px-6 py-16">
-            {statTiles.length > 0 && (
-              <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
-                {statTiles.map((t) => (
-                  <div key={t.label} className="text-center">
-                    <div className="font-heading text-primary text-3xl font-bold">{t.value}</div>
-                    <div className="text-muted-foreground text-sm">{t.label}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {reviews.length > 0 && (
-              <>
-                <h2 className="font-heading mb-6 text-center text-2xl font-bold sm:text-3xl">
-                  Що кажуть клієнти
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {reviews.slice(0, 6).map((r) => (
-                    <div key={r.id} className="border-border bg-card flex flex-col gap-2 rounded-2xl border p-4">
-                      <Stars rating={r.rating} />
-                      <p className="text-sm">{r.comment}</p>
-                      <p className="text-muted-foreground mt-auto text-xs">
-                        {r.clientName ?? "Клієнт"} про{" "}
-                        <Link href={`/@${r.masterUsername}`} className="hover:text-primary underline underline-offset-2">
-                          {r.masterName}
-                        </Link>{" "}
-                        · {r.serviceName}
-                      </p>
-                    </div>
-                  ))}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {statTiles.map((t) => (
+                <div key={t.label} className="text-center">
+                  <div className="font-heading text-primary text-3xl font-bold">{t.value}</div>
+                  <div className="text-muted-foreground text-sm">{t.label}</div>
                 </div>
-              </>
-            )}
+              ))}
+            </div>
           </div>
         </section>
       )}
