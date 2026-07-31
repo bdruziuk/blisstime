@@ -111,12 +111,12 @@ export default async function HomePage() {
               <Link
                 key={v.slug}
                 href={`/search?category=${v.slug}`}
-                className="bg-primary text-primary-foreground hover:bg-primary-hover card-hover flex flex-col gap-1.5 rounded-2xl p-4"
+                className="border-primary/15 bg-accent/40 hover:border-primary/40 hover:bg-accent/70 card-hover flex flex-col gap-1.5 rounded-2xl border p-4"
               >
-                <span className="font-heading text-base font-bold">{v.name}</span>
-                <span className="text-primary-foreground/80 text-xs">{v.blurb}</span>
+                <span className="font-heading text-primary text-base font-bold">{v.name}</span>
+                <span className="text-muted-foreground text-xs">{v.blurb}</span>
                 {count > 0 && (
-                  <span className="text-primary-foreground/90 mt-1 text-xs font-semibold">
+                  <span className="text-foreground/70 mt-1 text-xs font-semibold">
                     {count}{" "}
                     {count === 1 ? "майстер" : count < 5 ? "майстри" : "майстрів"}
                   </span>
