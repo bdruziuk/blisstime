@@ -144,6 +144,7 @@ export default async function SearchPage({
       reviewCount: salon.userRatingCount ?? undefined,
       profileHref: salon.websiteUri ?? salon.googleMapsUri ?? undefined,
       actionLabel: salon.websiteUri ? "Відкрити сайт" : "Google Maps",
+      phone: salon.internationalPhone ?? salon.nationalPhone ?? undefined,
     });
   }
 

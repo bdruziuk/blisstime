@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin, ArrowRight, Star } from "lucide-react";
+import { MapPin, ArrowRight, Phone, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -18,6 +18,7 @@ export type MasterListingItem = {
   currencyCode?: string;
   profileHref?: string;
   actionLabel?: string;
+  phone?: string;
 };
 
 const TYPE_LABELS: Record<MasterListingItem["organizationType"], string> = {
@@ -72,6 +73,7 @@ export function MasterListingCard({ item }: { item: MasterListingItem }) {
                 {item.city}, {item.address}
               </span>
             </p>
+            {item.phone && <a href={`tel:${item.phone.replace(/[^+\d]/g, "")}`} className="text-primary mt-1 flex items-center gap-1 text-xs hover:underline"><Phone className="size-3.5" />{item.phone}</a>}
           </div>
         </div>
 

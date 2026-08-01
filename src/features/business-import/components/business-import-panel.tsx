@@ -52,6 +52,8 @@ type ImportedBusiness = {
   manualReviewRequired: boolean;
   googleMapsUri: string | null;
   websiteUri: string | null;
+  nationalPhone: string | null;
+  internationalPhone: string | null;
   enrichmentStatus: string;
   enrichmentError: string | null;
   serviceDrafts: ServiceDraft[];
