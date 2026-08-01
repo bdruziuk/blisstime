@@ -1,16 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { VERTICALS } from "@/features/landing/verticals";
+import { CitySelector } from "./city-selector";
+import { slugify } from "@/lib/slugify";
 
 export function PublicHeader() {
   const [servicesOpen, setServicesOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const servicesRef = useRef<HTMLDivElement>(null);
+  const [selectedCity, setSelectedCity] = useState("");
+
+  useEffect(() => {
+    const readCity = () => decodeURIComponent(document.cookie.split("; ").find((item) => item.startsWith("catalog_city="))?.split("=")[1] ?? "");
+    setSelectedCity(readCity());
+    const update = (event: Event) => setSelectedCity((event as CustomEvent<string>).detail || readCity());
+    window.addEventListener("catalog-city-change", update);
+    return () => window.removeEventListener("catalog-city-change", update);
+  }, []);
+
+  const searchHref = (service = "all") => selectedCity ? selectedCity === "Київ" ? `/${slugify(selectedCity)}/all/${service}` : `/${slugify(selectedCity)}/${service}` : service === "all" ? "/search" : `/search?category=${service}`;
 
   useEffect(() => {
     if (!servicesOpen) return;
@@ -29,6 +42,7 @@ export function PublicHeader() {
         <Link href="/">
           <Logo className="text-lg" />
         </Link>
+        <Suspense fallback={<span className="text-muted-foreground text-sm">Місто…</span>}><CitySelector /></Suspense>
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
@@ -46,7 +60,7 @@ export function PublicHeader() {
                 {VERTICALS.map((v) => (
                   <Link
                     key={v.slug}
-                    href={`/search?category=${v.slug}`}
+                    href={searchHref(v.slug)}
                     onClick={() => setServicesOpen(false)}
                     className="hover:bg-accent/60 block rounded-lg px-2.5 py-2"
                   >
@@ -58,7 +72,7 @@ export function PublicHeader() {
             )}
           </div>
           <Link
-            href="/search"
+            href={searchHref()}
             className="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm font-medium"
           >
             Знайти майстра
@@ -108,18 +122,19 @@ export function PublicHeader() {
       {mobileOpen && (
         <div className="border-border bg-background border-t px-6 py-4 md:hidden">
           <div className="flex flex-col gap-1">
+            <div className="mb-2"><Suspense fallback={null}><CitySelector /></Suspense></div>
             <p className="text-muted-foreground px-1 pt-1 text-xs font-semibold uppercase">Послуги</p>
             {VERTICALS.map((v) => (
               <Link
                 key={v.slug}
-                href={`/search?category=${v.slug}`}
+                href={searchHref(v.slug)}
                 onClick={() => setMobileOpen(false)}
                 className="hover:bg-accent/60 rounded-lg px-2 py-2 text-sm"
               >
                 {v.name}
               </Link>
             ))}
-            <Link href="/search" onClick={() => setMobileOpen(false)} className="rounded-lg px-2 py-2 text-sm font-medium">
+            <Link href={searchHref()} onClick={() => setMobileOpen(false)} className="rounded-lg px-2 py-2 text-sm font-medium">
               Знайти майстра
             </Link>
             <Link href="/register" onClick={() => setMobileOpen(false)} className="rounded-lg px-2 py-2 text-sm font-medium">

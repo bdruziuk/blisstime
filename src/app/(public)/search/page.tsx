@@ -1,10 +1,13 @@
 import { Search as SearchIcon } from "lucide-react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { SearchFilters } from "@/features/search/components/search-filters";
 import { MasterListingCard, type MasterListingItem } from "@/features/search/components/master-listing-card";
 import { getRatingStatsForStaff } from "@/features/booking/rating";
 import { canonicalCityName, sameCanonicalCity } from "@/features/business-import/services/city-normalizer";
+import { slugify } from "@/lib/slugify";
 
 type SearchPageParams = {
   category?: string;
@@ -19,11 +22,24 @@ type SearchPageParams = {
 
 export default async function SearchPage({
   searchParams,
+  pathBased = false,
 }: {
   searchParams: Promise<SearchPageParams>;
+  pathBased?: boolean;
 }) {
-  const { category, city, district, type, minPrice, maxPrice, minRating, sort } =
-    await searchParams;
+  const params = await searchParams;
+  const { category, district: districtParam, type, minPrice, maxPrice, minRating, sort } = params;
+  const savedCity = (await cookies()).get("catalog_city")?.value;
+  const city = params.city || savedCity || undefined;
+  if (city && !pathBased) {
+    const citySlug = slugify(city);
+    const path = sameCanonicalCity(city, "Київ", "UA")
+      ? `/${citySlug}/${districtParam ? slugify(districtParam) : "all"}/${category || "all"}`
+      : `/${citySlug}/${category || "all"}`;
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries({ type, minPrice, maxPrice, minRating, sort })) if (value && value !== "all" && value !== "default") query.set(key, value);
+    redirect(query.size ? `${path}?${query}` : path);
+  }
 
   const [categories, cityRows, districtRows] = await Promise.all([
     // Top-level verticals (services attach to their leaves); "misc" is hidden.
@@ -53,7 +69,10 @@ export default async function SearchPage({
   });
   const importedCatalogCity = (row: (typeof importedLocationRows)[number]) => canonicalCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode);
   const cities = [...new Set([...cityRows.map((r) => canonicalCityName(r.city, "UA")), ...importedLocationRows.map(importedCatalogCity)].filter(Boolean))].sort();
-  const districts = [...new Set([...districtRows.filter((r) => !city || sameCanonicalCity(r.city, city, "UA")).map((r) => r.district), ...importedLocationRows.filter((r) => !city || sameCanonicalCity(importedCatalogCity(r), city, r.countryCode)).map((r) => r.district)].filter((d): d is string => Boolean(d)))].sort();
+  const districtOptions = [...new Set([...districtRows.filter((r) => !city || sameCanonicalCity(r.city, city, "UA")).map((r) => r.district), ...importedLocationRows.filter((r) => !city || sameCanonicalCity(importedCatalogCity(r), city, r.countryCode)).map((r) => r.district)].filter((d): d is string => Boolean(d)))].sort();
+  const isKyiv = Boolean(city && sameCanonicalCity(city, "Київ", "UA"));
+  const districts = isKyiv ? districtOptions : [];
+  const district = isKyiv && districtParam ? districtOptions.find((item) => item === districtParam || slugify(item) === districtParam) : undefined;
 
   const minPriceCents = minPrice ? Math.round(Number(minPrice) * 100) : undefined;
   const maxPriceCents = maxPrice ? Math.round(Number(maxPrice) * 100) : undefined;

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { slugify } from "@/lib/slugify";
 import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -210,7 +212,24 @@ export function SearchFilters({
   };
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const submit = () => formRef.current?.requestSubmit();
+
+  function submitToCatalog(form: HTMLFormElement) {
+    const data = new FormData(form);
+    const city = String(data.get("city") ?? "");
+    if (!city) { router.push("/search"); return; }
+    const district = String(data.get("district") ?? "");
+    const service = String(data.get("category") ?? "") || "all";
+    const citySlug = slugify(city);
+    const path = city === "Київ" ? `/${citySlug}/${district ? slugify(district) : "all"}/${service}` : `/${citySlug}/${service}`;
+    const query = new URLSearchParams();
+    for (const key of ["type", "minPrice", "maxPrice", "minRating", "sort"]) {
+      const value = String(data.get(key) ?? "");
+      if (value && value !== "all" && value !== "default") query.set(key, value);
+    }
+    router.push(query.size ? `${path}?${query}` : path);
+  }
 
   const [cityValue, setCityValue] = useState(defaultValues.city ?? "");
   const cityDirty = useRef(false);
@@ -235,8 +254,7 @@ export function SearchFilters({
     <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-64">
       <form
         ref={formRef}
-        action="/search"
-        method="GET"
+        onSubmit={(event) => { event.preventDefault(); submitToCatalog(event.currentTarget); }}
         className="border-border bg-card flex flex-col gap-5 rounded-xl border p-4"
       >
         <div className="flex items-center justify-between">
@@ -280,6 +298,7 @@ export function SearchFilters({
             searchPlaceholder="Пошук міста..."
             emptyLabel="Місто не знайдено"
             onSelect={(city) => {
+              document.cookie = city ? `catalog_city=${encodeURIComponent(city)}; Path=/; Max-Age=31536000; SameSite=Lax` : "catalog_city=; Path=/; Max-Age=0; SameSite=Lax";
               cityDirty.current = true;
               setCityValue(city);
             }}
