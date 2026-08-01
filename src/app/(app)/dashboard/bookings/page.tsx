@@ -4,12 +4,10 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getDayBoundsUTC, BUSINESS_TIMEZONE } from "@/features/booking/slots";
 import {
-  shiftDateISO,
   getWeekStartISO,
   getWeekDates,
   getWeekRangeUTC,
   getMonthRangeUTC,
-  shiftMonthISO,
 } from "@/features/booking/calendar-ranges";
 import { expireStaleHolds } from "@/features/booking/expiry";
 import { getPrepaymentAdvice } from "@/features/booking/reliability";
@@ -19,6 +17,8 @@ import { BookingsListView } from "@/features/booking/components/bookings-list-vi
 import { BookingsWeekView } from "@/features/booking/components/bookings-week-view";
 import { BookingsMonthView } from "@/features/booking/components/bookings-month-view";
 import { BookingsDateCarousel } from "@/features/booking/components/bookings-date-carousel";
+import { BookingsWeekCarousel } from "@/features/booking/components/bookings-week-carousel";
+import { BookingsMonthCarousel } from "@/features/booking/components/bookings-month-carousel";
 
 function todayISOInBusinessTz() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: BUSINESS_TIMEZONE }).format(new Date());
@@ -346,23 +346,7 @@ async function BookingsWeekContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3 text-sm">
-        <Link
-          href={`/dashboard/bookings?view=week&date=${shiftDateISO(weekStartISO, -7)}`}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          ← Попередній тиждень
-        </Link>
-        <span className="font-medium">
-          {weekStartISO} — {shiftDateISO(weekStartISO, 6)}
-        </span>
-        <Link
-          href={`/dashboard/bookings?view=week&date=${shiftDateISO(weekStartISO, 7)}`}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          Наступний тиждень →
-        </Link>
-      </div>
+      <BookingsWeekCarousel weekStartISO={weekStartISO} todayISO={todayISO} />
 
       <BookingsWeekView weekDates={weekDates} bookingsByDate={bookingsByDate} todayISO={todayISO} />
     </div>
@@ -397,21 +381,7 @@ async function BookingsMonthContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3 text-sm">
-        <Link
-          href={`/dashboard/bookings?view=month&date=${shiftMonthISO(dateISO, -1)}`}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          ← Попередній місяць
-        </Link>
-        <span className="font-medium">{dateISO.slice(0, 7)}</span>
-        <Link
-          href={`/dashboard/bookings?view=month&date=${shiftMonthISO(dateISO, 1)}`}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          Наступний місяць →
-        </Link>
-      </div>
+      <BookingsMonthCarousel monthISO={dateISO} todayISO={todayISO} />
 
       <BookingsMonthView monthAnchorISO={dateISO} countsByDate={countsByDate} todayISO={todayISO} />
     </div>
