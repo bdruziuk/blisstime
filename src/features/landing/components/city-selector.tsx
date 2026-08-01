@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, LocateFixed, MapPin } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { slugify } from "@/lib/slugify";
+import { canonicalCityName } from "@/features/business-import/services/city-normalizer";
 
 type City = { city: string; lat: number; lng: number };
 const COOKIE = "catalog_city";
@@ -26,7 +27,7 @@ export function CitySelector() {
   useEffect(() => {
     const cookieCity = decodeURIComponent(document.cookie.split("; ").find((item) => item.startsWith(`${COOKIE}=`))?.split("=")[1] ?? "");
     const queryCity = searchParams.get("city") ?? "";
-    setSelected(queryCity || cookieCity);
+    setSelected(canonicalCityName(queryCity || cookieCity, "UA"));
     fetch("/api/catalog/cities").then((response) => response.json()).then((data: { cities: City[] }) => setCities(data.cities)).catch(() => setCities([]));
   }, [searchParams]);
 

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slugify";
 import { getRatingStatsForStaff } from "@/features/booking/rating";
 import type { MasterListingItem } from "@/features/search/components/master-listing-card";
-import { canonicalCityName } from "@/features/business-import/services/city-normalizer";
+import { catalogCityName } from "@/features/business-import/services/city-normalizer";
 
 export type CatalogCombo = {
   citySlug: string;
@@ -59,7 +59,7 @@ export async function resolveCityFromSlug(citySlug: string): Promise<string | nu
     prisma.location.findMany({ where: { staff: { some: { onboardedAt: { not: null } } } }, select: { city: true }, distinct: ["city"] }),
     prisma.importedBusiness.findMany({ where: { publicationStatus: "PUBLISHED" }, select: { city: true, countryCode: true, importResults: { take: 1, orderBy: { createdAt: "desc" }, select: { job: { select: { city: { select: { name: true, countryCode: true } } } } } } } }),
   ]);
-  const cities = [...rows.map((row) => canonicalCityName(row.city, "UA")), ...imported.map((row) => canonicalCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode))];
+  const cities = [...rows.map((row) => catalogCityName(row.city, "UA")), ...imported.map((row) => catalogCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode))].filter((city): city is string => Boolean(city));
   return cities.find((city) => slugify(city) === citySlug) ?? null;
 }
 
@@ -117,6 +117,7 @@ export async function getCatalogListings(
         maxPriceCents: Math.max(...prices),
         avgRating: stats?.avgRating,
         reviewCount: stats?.reviewCount,
+        ratingSource: "platform" as const,
       };
     });
 }

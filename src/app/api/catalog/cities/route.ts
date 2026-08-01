@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { canonicalCityName } from "@/features/business-import/services/city-normalizer";
+import { catalogCityName } from "@/features/business-import/services/city-normalizer";
 
 export async function GET() {
   const [locations, imported] = await Promise.all([
@@ -13,8 +13,8 @@ export async function GET() {
     if (current) { current.lat += lat; current.lng += lng; current.count += 1; }
     else grouped.set(city, { city, lat, lng, count: 1 });
   };
-  for (const row of locations) if (row.lat !== null && row.lng !== null) add(canonicalCityName(row.city, "UA"), row.lat, row.lng);
-  for (const row of imported) add(canonicalCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode), row.lat, row.lng);
+  for (const row of locations) { const city = catalogCityName(row.city, "UA"); if (city && row.lat !== null && row.lng !== null) add(city, row.lat, row.lng); }
+  for (const row of imported) { const city = catalogCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode); if (city) add(city, row.lat, row.lng); }
   const cities = [...grouped.values()].map((row) => ({ city: row.city, lat: row.lat / row.count, lng: row.lng / row.count })).sort((a, b) => a.city.localeCompare(b.city, "uk"));
   return NextResponse.json({ cities });
 }

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { SearchFilters } from "@/features/search/components/search-filters";
 import { MasterListingCard, type MasterListingItem } from "@/features/search/components/master-listing-card";
 import { getRatingStatsForStaff } from "@/features/booking/rating";
-import { canonicalCityName, sameCanonicalCity } from "@/features/business-import/services/city-normalizer";
+import { canonicalCityName, catalogCityName, sameCanonicalCity } from "@/features/business-import/services/city-normalizer";
 import { slugify } from "@/lib/slugify";
 import { canonicalKyivDistrict, sameKyivDistrict } from "@/features/business-import/services/kyiv-district-normalizer";
 
@@ -68,8 +68,8 @@ export default async function SearchPage({
     where: { publicationStatus: "PUBLISHED" },
     select: { city: true, district: true, countryCode: true, importResults: { take: 1, orderBy: { createdAt: "desc" }, select: { job: { select: { city: { select: { name: true, countryCode: true } } } } } } },
   });
-  const importedCatalogCity = (row: (typeof importedLocationRows)[number]) => canonicalCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode);
-  const cities = [...new Set([...cityRows.map((r) => canonicalCityName(r.city, "UA")), ...importedLocationRows.map(importedCatalogCity)].filter(Boolean))].sort();
+  const importedCatalogCity = (row: (typeof importedLocationRows)[number]) => catalogCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode) ?? "";
+  const cities = [...new Set([...cityRows.map((r) => catalogCityName(r.city, "UA")), ...importedLocationRows.map(importedCatalogCity)].filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "uk"));
   const districtOptions = [...new Set([...districtRows.filter((r) => !city || sameCanonicalCity(r.city, city, "UA")).map((r) => canonicalKyivDistrict(r.district)), ...importedLocationRows.filter((r) => !city || sameCanonicalCity(importedCatalogCity(r), city, r.countryCode)).map((r) => canonicalKyivDistrict(r.district))].filter((d): d is string => Boolean(d)))].sort((a, b) => a.localeCompare(b, "uk"));
   const isKyiv = Boolean(city && sameCanonicalCity(city, "Київ", "UA"));
   const districts = isKyiv ? districtOptions : [];
@@ -137,6 +137,7 @@ export default async function SearchPage({
         maxPriceCents: Math.max(...prices),
         avgRating: stats?.avgRating,
         reviewCount: stats?.reviewCount,
+        ratingSource: "platform" as const,
       };
     });
 
@@ -165,6 +166,7 @@ export default async function SearchPage({
       currencyCode: drafts[0]?.currencyCode,
       avgRating: salon.rating ?? undefined,
       reviewCount: salon.userRatingCount ?? undefined,
+      ratingSource: "google",
       profileHref: salon.websiteUri ?? salon.googleMapsUri ?? undefined,
       actionLabel: salon.websiteUri ? "Відкрити сайт" : "Google Maps",
       phone: salon.internationalPhone ?? salon.nationalPhone ?? undefined,

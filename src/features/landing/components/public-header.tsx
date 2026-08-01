@@ -8,6 +8,7 @@ import { Logo } from "@/components/logo";
 import { VERTICALS } from "@/features/landing/verticals";
 import { CitySelector } from "./city-selector";
 import { slugify } from "@/lib/slugify";
+import { canonicalCityName } from "@/features/business-import/services/city-normalizer";
 
 export function PublicHeader() {
   const [servicesOpen, setServicesOpen] = useState(false);
@@ -16,7 +17,7 @@ export function PublicHeader() {
   const [selectedCity, setSelectedCity] = useState("");
 
   useEffect(() => {
-    const readCity = () => decodeURIComponent(document.cookie.split("; ").find((item) => item.startsWith("catalog_city="))?.split("=")[1] ?? "");
+    const readCity = () => canonicalCityName(decodeURIComponent(document.cookie.split("; ").find((item) => item.startsWith("catalog_city="))?.split("=")[1] ?? ""), "UA");
     setSelectedCity(readCity());
     const update = (event: Event) => setSelectedCity((event as CustomEvent<string>).detail || readCity());
     window.addEventListener("catalog-city-change", update);
