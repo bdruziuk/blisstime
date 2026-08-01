@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import {
+  ArrowLeft,
   CalendarDays,
   CheckCircle2,
   ExternalLink,
@@ -44,8 +45,20 @@ const statusLabels: Record<string, string> = {
 
 export default async function SuperAdminPage() {
   const session = await auth();
-  const adminEmail = session?.user?.email;
-  if (!isSuperAdminEmail(adminEmail)) notFound();
+  if (!session?.user?.id) redirect("/login");
+
+  // Read the current email from the database instead of trusting a potentially
+  // stale JWT value (for example, after an account email was changed).
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { email: true },
+  });
+  if (!currentUser) redirect("/login");
+
+  const adminEmail = currentUser.email;
+  if (!isSuperAdminEmail(adminEmail)) {
+    return <AccessDenied email={adminEmail} />;
+  }
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
@@ -288,6 +301,34 @@ export default async function SuperAdminPage() {
             })
           )}
         </section>
+      </main>
+    </>
+  );
+}
+
+function AccessDenied({ email }: { email: string | null }) {
+  return (
+    <>
+      <SiteHeader />
+      <main className="mx-auto flex min-h-[70vh] max-w-xl items-center px-6 py-16">
+        <div className="border-border bg-card w-full rounded-2xl border p-8 text-center shadow-sm">
+          <div className="bg-destructive/10 text-destructive mx-auto flex size-14 items-center justify-center rounded-full">
+            <ShieldCheck className="size-7" />
+          </div>
+          <h1 className="font-heading mt-5 text-2xl font-bold">Недостатньо прав</h1>
+          <p className="text-muted-foreground mt-2 text-sm leading-6">
+            Акаунт {email ? <strong className="text-foreground">{email}</strong> : "без email"} не має
+            доступу до панелі суперадміна. Зверніться до власника платформи, щоб додати email до
+            списку суперадмінів.
+          </p>
+          <Link
+            href="/dashboard"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 mt-6 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+          >
+            <ArrowLeft className="size-4" />
+            Повернутися в кабінет
+          </Link>
+        </div>
       </main>
     </>
   );
