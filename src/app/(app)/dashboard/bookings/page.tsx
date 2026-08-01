@@ -18,6 +18,7 @@ import { BookingsViewSwitcher, type BookingsView } from "@/features/booking/comp
 import { BookingsListView } from "@/features/booking/components/bookings-list-view";
 import { BookingsWeekView } from "@/features/booking/components/bookings-week-view";
 import { BookingsMonthView } from "@/features/booking/components/bookings-month-view";
+import { BookingsDateCarousel } from "@/features/booking/components/bookings-date-carousel";
 
 function todayISOInBusinessTz() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: BUSINESS_TIMEZONE }).format(new Date());
@@ -87,7 +88,7 @@ export default async function BookingsPage({
       )}
 
       {viewMode === "day" && (
-        <BookingsDayContent staffId={staff.id} dateISO={dateISO} />
+        <BookingsDayContent staffId={staff.id} dateISO={dateISO} todayISO={todayISO} />
       )}
 
       {viewMode === "week" && (
@@ -243,7 +244,15 @@ async function BookingsListContent({
   );
 }
 
-async function BookingsDayContent({ staffId, dateISO }: { staffId: string; dateISO: string }) {
+async function BookingsDayContent({
+  staffId,
+  dateISO,
+  todayISO,
+}: {
+  staffId: string;
+  dateISO: string;
+  todayISO: string;
+}) {
   const { start, end } = getDayBoundsUTC(dateISO);
 
   const [bookings, services] = await Promise.all([
@@ -266,21 +275,7 @@ async function BookingsDayContent({ staffId, dateISO }: { staffId: string; dateI
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3 text-sm">
-        <Link
-          href={`/dashboard/bookings?view=day&date=${shiftDateISO(dateISO, -1)}`}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          ← Попередній день
-        </Link>
-        <span className="font-medium">{dateISO}</span>
-        <Link
-          href={`/dashboard/bookings?view=day&date=${shiftDateISO(dateISO, 1)}`}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          Наступний день →
-        </Link>
-      </div>
+      <BookingsDateCarousel dateISO={dateISO} todayISO={todayISO} />
 
       <AdminBookingsPanel
         staffId={staffId}
