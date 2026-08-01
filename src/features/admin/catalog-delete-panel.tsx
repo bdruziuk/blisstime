@@ -20,9 +20,12 @@ function DeleteList({ title, type, initialItems }: { title: string; type: "maste
     if (!selected.size || !window.confirm(`Видалити вибрані записи (${selected.size})? Цю дію неможливо скасувати.`)) return;
     setLoading(true);
     try {
-      const response = await fetch("/api/admin/catalog/bulk-delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, ids: [...selected] }) });
-      const data = await response.json() as { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Не вдалося видалити записи");
+      const ids = [...selected];
+      for (let offset = 0; offset < ids.length; offset += 500) {
+        const response = await fetch("/api/admin/catalog/bulk-delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type, ids: ids.slice(offset, offset + 500) }) });
+        const data = await response.json() as { error?: string };
+        if (!response.ok) throw new Error(data.error ?? "Не вдалося видалити записи");
+      }
       setItems((current) => current.filter((item) => !selected.has(item.id)));
       setSelected(new Set());
       router.refresh();

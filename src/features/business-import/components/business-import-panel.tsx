@@ -202,18 +202,23 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
 
   async function moderateBusinesses(ids: string[], status: "PUBLISHED" | "REJECTED") {
     try {
-      const result = await responseJson<{ updatedCount: number }>(await fetch("/api/admin/business-import/businesses/bulk-status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids, status }),
-      }));
-      if (result.updatedCount === 0) throw new Error("Жоден із вибраних салонів не був оновлений");
+      let updatedCount = 0;
+      for (let offset = 0; offset < ids.length; offset += 500) {
+        const result = await responseJson<{ updatedCount: number }>(await fetch("/api/admin/business-import/businesses/bulk-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: ids.slice(offset, offset + 500), status }),
+        }));
+        updatedCount += result.updatedCount;
+      }
+      if (updatedCount === 0) throw new Error("Жоден із вибраних салонів не був оновлений");
       setBusinesses((current) => current.map((business) => ids.includes(business.id) ? { ...business, publicationStatus: status } : business));
-      setNotice(status === "PUBLISHED" ? `Опубліковано салонів: ${result.updatedCount}. Вони доступні в пошуку для свого міста.` : `Відхилено салонів: ${result.updatedCount}.`);
+      setNotice(status === "PUBLISHED" ? `Опубліковано салонів: ${updatedCount}. Вони доступні в пошуку для свого міста.` : `Відхилено салонів: ${updatedCount}.`);
       if (selectedJob) await loadDetails(selectedJob.id);
-      return result.updatedCount;
+      return updatedCount;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Не вдалося змінити статус вибраних закладів");
+      if (selectedJob) await loadDetails(selectedJob.id);
       throw reason;
     }
   }
