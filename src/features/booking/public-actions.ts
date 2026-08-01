@@ -1,10 +1,16 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import { formatInTimeZone } from "date-fns-tz";
 import { prisma } from "@/lib/prisma";
 import { bookingSchema } from "./schemas";
 import { normalizePhone } from "./phone";
-import { generateSlotsForDate, getDayBoundsUTC, type WorkingHours } from "./slots";
+import {
+  BUSINESS_TIMEZONE,
+  generateSlotsForDate,
+  getDayBoundsUTC,
+  type WorkingHours,
+} from "./slots";
 import { insertBookingForClient, decideInitialBookingStatus } from "./create-booking";
 import { expireStaleHolds } from "./expiry";
 import { getMedianResponseMinutes } from "./response-time";
@@ -35,7 +41,9 @@ export async function getAvailableSlots(
 
   const [staff, servicesForStaff] = await Promise.all([
     prisma.staff.findUnique({ where: { id: staffId }, include: { location: true } }),
-    prisma.staffService.findMany({ where: { id: { in: serviceIds }, staffId } }),
+    prisma.staffService.findMany({
+      where: { id: { in: serviceIds }, staffId, isActive: true },
+    }),
   ]);
   if (!staff || servicesForStaff.length !== serviceIds.length) return [];
 
@@ -84,6 +92,10 @@ export async function createBooking(
   }
   const { serviceIds, slotStartISO, clientName, clientPhone } = parsed.data;
 
+  if (new Set(serviceIds).size !== serviceIds.length) {
+    return { error: "Послуги в записі не можуть повторюватися" };
+  }
+
   const phone = normalizePhone(clientPhone);
   if (!phone) {
     return { error: "Некоректний номер телефону" };
@@ -92,7 +104,7 @@ export async function createBooking(
   // All selected services must belong to the same staff member. Ordering is
   // preserved to match the client's selection (first = primary).
   const services = await prisma.staffService.findMany({
-    where: { id: { in: serviceIds } },
+    where: { id: { in: serviceIds }, isActive: true },
     include: { staff: true },
   });
   const orderedServices = serviceIds
@@ -115,7 +127,17 @@ export async function createBooking(
   const totalDuration = orderedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
   const slotEnd = new Date(slotStart.getTime() + totalDuration * 60_000);
 
-  await expireStaleHolds(staffId);
+  // Never trust a slot submitted by the browser. Regenerate availability on
+  // the server so arbitrary requests cannot book outside working hours, in
+  // the past, off the 15-minute grid, or across a booking/schedule block.
+  const bookingDate = formatInTimeZone(slotStart, BUSINESS_TIMEZONE, "yyyy-MM-dd");
+  const availableSlots = await getAvailableSlots(staffId, serviceIds, bookingDate);
+  const submittedSlotIsAvailable = availableSlots.some(
+    (slot) => slot.startISO === slotStart.toISOString() && slot.endISO === slotEnd.toISOString()
+  );
+  if (!submittedSlotIsAvailable) {
+    return { error: "Цей час уже недоступний, оберіть інший" };
+  }
 
   const existingClient = await prisma.client.findUnique({ where: { phone } });
 
