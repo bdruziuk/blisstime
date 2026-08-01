@@ -1,6 +1,16 @@
 import Link from "next/link";
-import { CalendarDays, Settings, LogOut, LayoutDashboard, Scissors, Users, Wallet } from "lucide-react";
+import {
+  CalendarDays,
+  Settings,
+  LogOut,
+  LayoutDashboard,
+  Scissors,
+  ShieldCheck,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
+import { isSuperAdminEmail } from "@/lib/super-admin";
 import { Logo } from "@/components/logo";
 
 const NAV_LINKS = [
@@ -22,6 +32,15 @@ export async function SiteHeader() {
           <Logo className="text-lg" />
         </Link>
         <nav className="flex items-center gap-1 text-sm">
+          {isSuperAdminEmail(session?.user?.email) && (
+            <Link
+              href="/admin"
+              className="text-primary hover:bg-primary/10 flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium"
+            >
+              <ShieldCheck className="size-4" />
+              Адмін
+            </Link>
+          )}
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}

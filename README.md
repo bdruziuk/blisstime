@@ -85,6 +85,7 @@ scripts             локальний Telegram polling
 | `NEXTAUTH_SECRET` | Секрет підпису Auth.js |
 | `NEXTAUTH_URL` | Базова URL для Auth.js |
 | `NEXT_PUBLIC_APP_URL` | Публічна URL застосунку |
+| `SUPER_ADMIN_EMAILS` | Email суперадмінів через кому; надає доступ до `/admin` |
 | `TELEGRAM_BOT_TOKEN` | Токен Telegram-бота |
 | `TELEGRAM_BOT_USERNAME` | Username бота без `@` |
 | `TELEGRAM_WEBHOOK_SECRET` | Перевірка запитів Telegram webhook |
