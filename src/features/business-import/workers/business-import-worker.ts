@@ -6,6 +6,7 @@ import { googlePlacesProvider } from "../providers/google-places";
 import { approximateCellSizeKm, containsCoordinates, splitArea } from "../services/grid-builder";
 import { uniqueByExternalId } from "../services/deduplicator";
 import { upsertImportedBusiness, type UpsertOutcome } from "../services/business-upsert";
+import { canonicalCityName } from "../services/city-normalizer";
 
 type ClaimedTask = {
   id: string;
@@ -205,7 +206,7 @@ async function processClaimedTask(task: ClaimedTask, provider: BusinessImportPro
         );
         await prisma.importedBusiness.update({
           where: { id: freshExisting.id },
-          data: { categories },
+          data: { categories, city: canonicalCityName(job.city.name, job.city.countryCode) },
         });
         await recordJobResult(job.id, freshExisting.id, task.category, "duplicate");
         counts.duplicate += 1;

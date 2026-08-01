@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { slugify } from "@/lib/slugify";
 import { findPotentialDuplicate } from "./deduplicator";
 import { normalizeComparableText, normalizeDomain, normalizeImportedPhone } from "./normalizer";
+import { canonicalCityName } from "./city-normalizer";
 
 export type UpsertOutcome = "created" | "updated" | "duplicate";
 export type UpsertResult = { outcome: UpsertOutcome; businessId: string };
@@ -38,7 +39,10 @@ export async function upsertImportedBusiness({
   const categories = Array.from(
     new Set([...(Array.isArray(existing?.categories) ? (existing.categories as string[]) : []), category])
   );
-  const city = component(details, "locality") ?? component(details, "postal_town") ?? fallbackCity;
+  // Google frequently returns a suburb/locality (for example Sofiivska
+  // Borshchahivka) for a place inside the selected import area. The selected
+  // import city is the authoritative catalog city; locality remains in address.
+  const city = canonicalCityName(fallbackCity, fallbackCountryCode);
   const district =
     component(details, "sublocality_level_1") ?? component(details, "administrative_area_level_2");
   const countryCode =

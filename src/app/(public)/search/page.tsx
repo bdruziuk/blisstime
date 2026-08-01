@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { SearchFilters } from "@/features/search/components/search-filters";
 import { MasterListingCard, type MasterListingItem } from "@/features/search/components/master-listing-card";
 import { getRatingStatsForStaff } from "@/features/booking/rating";
+import { canonicalCityName, sameCanonicalCity } from "@/features/business-import/services/city-normalizer";
 
 type SearchPageParams = {
   category?: string;
@@ -41,18 +42,18 @@ export default async function SearchPage({
       where: {
         staff: { some: { onboardedAt: { not: null } } },
         district: { not: null },
-        ...(city ? { city: { equals: city, mode: "insensitive" } } : {}),
       },
-      select: { district: true },
+      select: { district: true, city: true },
       distinct: ["district"],
     }),
   ]);
   const importedLocationRows = await prisma.importedBusiness.findMany({
     where: { publicationStatus: "PUBLISHED" },
-    select: { city: true, district: true },
+    select: { city: true, district: true, countryCode: true, importResults: { take: 1, orderBy: { createdAt: "desc" }, select: { job: { select: { city: { select: { name: true, countryCode: true } } } } } } },
   });
-  const cities = [...new Set([...cityRows.map((r) => r.city), ...importedLocationRows.map((r) => r.city)].filter(Boolean))].sort();
-  const districts = [...new Set([...districtRows.map((r) => r.district), ...importedLocationRows.filter((r) => !city || r.city.toLocaleLowerCase().includes(city.toLocaleLowerCase())).map((r) => r.district)].filter((d): d is string => Boolean(d)))].sort();
+  const importedCatalogCity = (row: (typeof importedLocationRows)[number]) => canonicalCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode);
+  const cities = [...new Set([...cityRows.map((r) => canonicalCityName(r.city, "UA")), ...importedLocationRows.map(importedCatalogCity)].filter(Boolean))].sort();
+  const districts = [...new Set([...districtRows.filter((r) => !city || sameCanonicalCity(r.city, city, "UA")).map((r) => r.district), ...importedLocationRows.filter((r) => !city || sameCanonicalCity(importedCatalogCity(r), city, r.countryCode)).map((r) => r.district)].filter((d): d is string => Boolean(d)))].sort();
 
   const minPriceCents = minPrice ? Math.round(Number(minPrice) * 100) : undefined;
   const maxPriceCents = maxPrice ? Math.round(Number(maxPrice) * 100) : undefined;
@@ -71,12 +72,11 @@ export default async function SearchPage({
   // Build a single location filter — separate `location:` spreads would
   // overwrite each other, dropping the city filter when a type is also set.
   const locationFilter: Prisma.LocationWhereInput = {};
-  if (city) locationFilter.city = { contains: city, mode: "insensitive" };
   if (district) locationFilter.district = { equals: district, mode: "insensitive" };
   if (type === "salon") locationFilter.organization = { type: "SALON" };
   if (type === "solo") locationFilter.organization = { type: "SOLO" };
 
-  const staffRows = await prisma.staff.findMany({
+  let staffRows = await prisma.staff.findMany({
     where: {
       onboardedAt: { not: null },
       ...(Object.keys(locationFilter).length ? { location: locationFilter } : {}),
@@ -87,14 +87,14 @@ export default async function SearchPage({
       services: { where: serviceFilter, include: { category: true } },
     },
   });
+  if (city) staffRows = staffRows.filter((staff) => sameCanonicalCity(staff.location.city, city, "UA"));
 
   const importedRows = type === "solo" ? [] : await prisma.importedBusiness.findMany({
     where: {
       publicationStatus: "PUBLISHED",
-      ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
       ...(district ? { district: { equals: district, mode: "insensitive" } } : {}),
     },
-    include: { serviceDrafts: { where: { status: "APPROVED" } } },
+    include: { serviceDrafts: { where: { status: "APPROVED" } }, importResults: { take: 1, orderBy: { createdAt: "desc" }, include: { job: { include: { city: true } } } } },
   });
 
   const ratingStats = await getRatingStatsForStaff(staffRows.map((s) => s.id));
@@ -109,7 +109,7 @@ export default async function SearchPage({
         username: s.username,
         displayName: s.displayName,
         bio: s.bio,
-        city: s.location.city,
+        city: canonicalCityName(s.location.city, "UA"),
         address: s.location.address,
         organizationType: s.location.organization.type,
         categoryNames: [...new Set(s.services.map((sv) => sv.category.name))],
@@ -121,6 +121,8 @@ export default async function SearchPage({
     });
 
   for (const salon of importedRows) {
+    const salonCity = canonicalCityName(salon.importResults[0]?.job.city.name ?? salon.city, salon.importResults[0]?.job.city.countryCode ?? salon.countryCode);
+    if (city && !sameCanonicalCity(salonCity, city, salon.countryCode)) continue;
     let drafts = salon.serviceDrafts;
     if (category) drafts = drafts.filter((draft) => draft.categorySlug === category || draft.categorySlug?.startsWith(`${category}.`));
     if (minPriceCents !== undefined) drafts = drafts.filter((draft) => draft.priceMinor >= minPriceCents);
@@ -133,7 +135,7 @@ export default async function SearchPage({
       username: salon.slug,
       displayName: salon.name,
       bio: null,
-      city: salon.city,
+      city: salonCity,
       address: salon.formattedAddress,
       organizationType: "SALON",
       categoryNames,
