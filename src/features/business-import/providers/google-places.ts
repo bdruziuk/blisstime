@@ -152,7 +152,7 @@ export class GooglePlacesImportProvider implements BusinessImportProvider {
   }
 
   async resolveCity(externalId: string): Promise<ResolvedImportCity> {
-    const place = await googleRequest<GooglePlace>(`/places/${encodeURIComponent(externalId)}`, {
+    const place = await googleRequest<GooglePlace>(`/places/${encodeURIComponent(externalId)}?languageCode=uk`, {
       method: "GET",
       fieldMask: "id,displayName,formattedAddress,addressComponents,location,viewport",
     });
@@ -168,10 +168,13 @@ export class GooglePlacesImportProvider implements BusinessImportProvider {
       throw new GooglePlacesError("Місто не знайдено або Google не повернув viewport", 422, false);
     }
     const country = place.addressComponents?.find((component) => component.types?.includes("country"));
+    const localizedCity = place.addressComponents?.find((component) =>
+      component.types?.some((type) => ["locality", "postal_town", "administrative_area_level_3"].includes(type))
+    )?.longText ?? place.displayName.text;
     return {
       provider: "GOOGLE",
       externalId: place.id,
-      name: place.displayName.text,
+      name: localizedCity,
       formattedName: place.formattedAddress ?? place.displayName.text,
       countryCode: country?.shortText?.toUpperCase() ?? "XX",
       centerLat: place.location.latitude ?? (bounds.south + bounds.north) / 2,
@@ -211,7 +214,7 @@ export class GooglePlacesImportProvider implements BusinessImportProvider {
   }
 
   async getBusinessDetails(externalId: string): Promise<ImportedBusinessDetails> {
-    const place = await googleRequest<GooglePlace>(`/places/${encodeURIComponent(externalId)}`, {
+    const place = await googleRequest<GooglePlace>(`/places/${encodeURIComponent(externalId)}?languageCode=uk`, {
       method: "GET",
       fieldMask:
         "id,displayName,formattedAddress,addressComponents,location,primaryType,types,nationalPhoneNumber,internationalPhoneNumber,websiteUri,googleMapsUri,rating,userRatingCount,regularOpeningHours,businessStatus",
