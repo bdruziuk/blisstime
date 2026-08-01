@@ -91,6 +91,7 @@ scripts             локальний Telegram polling
 | `TELEGRAM_WEBHOOK_SECRET` | Перевірка запитів Telegram webhook |
 | `CRON_SECRET` | Захист endpoint нагадувань |
 | `OPENAI_API_KEY` | AI-імпорт прайс-листа |
+| `GOOGLE_PLACES_SERVER_API_KEY` | Серверний ключ Google Places API (New) для імпорту салонів |
 | `ALLOW_INDEXING` | Дозволяє індексацію лише за точного значення `true` |
 
 Повний шаблон міститься у `.env.example`. Файл `.env` не можна комітити.
@@ -131,6 +132,15 @@ POST /api/telegram/webhook
 GET|POST /api/worker/telegram-reminders
 Authorization: Bearer <CRON_SECRET>
 ```
+
+DB-backed імпортер салонів обробляється короткими викликами:
+
+```text
+GET|POST /api/worker/business-import
+Authorization: Bearer <CRON_SECRET>
+```
+
+Детальна конфігурація: [`docs/business-importer.md`](docs/business-importer.md).
 
 Для локальної розробки без публічного webhook використовуйте `npm run bot:dev`.
 

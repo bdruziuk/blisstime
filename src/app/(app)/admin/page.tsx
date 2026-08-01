@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowLeft,
+  Building2,
   CalendarDays,
   CheckCircle2,
   ExternalLink,
@@ -138,6 +139,13 @@ export default async function SuperAdminPage() {
             <p className="text-muted-foreground mt-1 text-sm">
               Акаунти майстрів, їхні налаштування, активність і клієнти.
             </p>
+            <Link
+              href="/admin/business-import"
+              className="text-primary mt-3 inline-flex items-center gap-1.5 text-sm font-semibold hover:underline"
+            >
+              <Building2 className="size-4" />
+              Імпорт салонів
+            </Link>
           </div>
           <p className="text-muted-foreground text-sm">Вхід: {adminEmail}</p>
         </header>

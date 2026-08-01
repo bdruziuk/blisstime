@@ -32,6 +32,39 @@ enum ConfirmationMode {
   AUTO_TRUSTED
 }
 
+enum ImportJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+  FAILED
+  CANCELLED
+}
+
+enum ImportTaskStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ImportedBusinessStatus {
+  IMPORT_PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+}
+
+enum EnrichmentStatus {
+  NOT_STARTED
+  QUEUED
+  PROCESSING
+  COMPLETED
+  PARTIAL
+  FAILED
+  NO_WEBSITE
+  NO_PRICES_FOUND
+}
 
 model Organization {
   id        String           @id @default(cuid())
@@ -108,14 +141,14 @@ model ServiceCategory {
 }
 
 model StaffService {
-  id              String  @id @default(cuid())
-  staffId         String
-  categoryId      String
-  displayName     String
+  id                  String  @id @default(cuid())
+  staffId             String
+  categoryId          String
+  displayName         String
   // Money is always an integer, never a float.
-  priceCents      Int
-  durationMinutes Int
-  isActive        Boolean @default(true)
+  priceCents          Int
+  durationMinutes     Int
+  isActive            Boolean @default(true)
   // Weeks after a completed visit to nudge the client to rebook (Камбекер).
   // Null = don't remind for this service.
   rebookReminderWeeks Int?
@@ -132,14 +165,14 @@ model StaffService {
 }
 
 model Client {
-  id             String  @id @default(cuid())
+  id                String  @id @default(cuid())
   // Normalized to +380XXXXXXXXX
-  phone          String  @unique
-  name           String?
-  telegramChatId String?
+  phone             String  @unique
+  name              String?
+  telegramChatId    String?
   // One-time secret in the t.me/<bot>?start=c_<token> deep link the client taps.
   telegramLinkToken String? @unique
-  notes          String?
+  notes             String?
 
   // Computed from no-shows / late cancellations.
   reliabilityScore      Int @default(100)
@@ -193,12 +226,12 @@ model Booking {
   slotEnd   DateTime
 
   // Set while PENDING; a hold past this time is lazily flipped to EXPIRED.
-  holdExpiresAt DateTime?
+  holdExpiresAt          DateTime?
   // When the master confirmed/declined — used for the response-time estimate.
-  respondedAt   DateTime?
-  cancelledAt   DateTime?
+  respondedAt            DateTime?
+  cancelledAt            DateTime?
   // Timestamps marking that each Telegram nudge has gone out (prevents repeats).
-  masterReminderSentAt  DateTime?
+  masterReminderSentAt   DateTime?
   clientReminder24SentAt DateTime?
   clientReminder1SentAt  DateTime?
   rebookReminderSentAt   DateTime?
@@ -207,8 +240,8 @@ model Booking {
   staff   Staff        @relation(fields: [staffId], references: [id], onDelete: Restrict)
   service StaffService @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
-  services   BookingService[]
-  review     Review?
+  services BookingService[]
+  review   Review?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -323,11 +356,158 @@ model User {
   // Only set for credentials (email/password) sign-up.
   passwordHash  String?
 
-  accounts Account[]
-  sessions Session[]
-  staff    Staff?
+  accounts           Account[]
+  sessions           Session[]
+  staff              Staff?
+  businessImportJobs BusinessImportJob[]
 
   createdAt DateTime @default(now())
+}
+
+model BusinessImportCity {
+  id            String @id @default(cuid())
+  provider      String
+  externalId    String
+  name          String
+  formattedName String
+  countryCode   String
+  centerLat     Float
+  centerLng     Float
+  south         Float
+  west          Float
+  north         Float
+  east          Float
+
+  jobs BusinessImportJob[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, externalId])
+}
+
+model BusinessImportJob {
+  id             String          @id @default(cuid())
+  cityId         String
+  provider       String
+  status         ImportJobStatus @default(PENDING)
+  categories     Json
+  includeDetails Boolean         @default(true)
+
+  totalTasks     Int @default(0)
+  completedTasks Int @default(0)
+  foundCount     Int @default(0)
+  createdCount   Int @default(0)
+  updatedCount   Int @default(0)
+  duplicateCount Int @default(0)
+  failedCount    Int @default(0)
+
+  errorMessage String?
+  startedAt    DateTime?
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  createdById  String?
+
+  city      BusinessImportCity     @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  createdBy User?                  @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  tasks     BusinessImportTask[]
+  results   BusinessImportResult[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([cityId, createdAt])
+}
+
+model BusinessImportTask {
+  id           String           @id @default(cuid())
+  jobId        String
+  category     String
+  searchQuery  String
+  status       ImportTaskStatus @default(PENDING)
+  south        Float
+  west         Float
+  north        Float
+  east         Float
+  depth        Int              @default(0)
+  attempts     Int              @default(0)
+  foundCount   Int              @default(0)
+  errorMessage String?
+  lockedAt     DateTime?
+  startedAt    DateTime?
+  completedAt  DateTime?
+
+  job BusinessImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([jobId, status])
+  @@index([status, lockedAt])
+}
+
+model ImportedBusiness {
+  id                   String                 @id @default(cuid())
+  provider             String
+  externalId           String
+  name                 String
+  slug                 String
+  publicationStatus    ImportedBusinessStatus @default(IMPORT_PENDING_REVIEW)
+  enrichmentStatus     EnrichmentStatus       @default(NOT_STARTED)
+  manualReviewRequired Boolean                @default(false)
+  countryCode          String
+  city                 String
+  district             String?
+  formattedAddress     String
+  lat                  Float
+  lng                  Float
+  nationalPhone        String?
+  internationalPhone   String?
+  normalizedPhone      String?
+  websiteUri           String?
+  normalizedDomain     String?
+  googleMapsUri        String?
+  rating               Float?
+  userRatingCount      Int?
+  primaryType          String?
+  types                Json
+  categories           Json
+  regularOpeningHours  Json?
+  businessStatus       String?
+  normalizedName       String
+  normalizedAddress    String
+  sourceFetchedAt      DateTime
+  lastSyncedAt         DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  importResults BusinessImportResult[]
+
+  @@unique([provider, externalId])
+  @@unique([slug])
+  @@index([publicationStatus, city])
+  @@index([normalizedPhone])
+  @@index([normalizedDomain])
+  @@index([normalizedName, normalizedAddress])
+}
+
+model BusinessImportResult {
+  id         String @id @default(cuid())
+  jobId      String
+  businessId String
+  category   String
+  outcome    String
+
+  job      BusinessImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  business ImportedBusiness  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([jobId, businessId])
+  @@index([businessId])
 }
 
 model ReminderRule {
