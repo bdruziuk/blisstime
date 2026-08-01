@@ -17,6 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { isSuperAdminEmail } from "@/lib/super-admin";
 import { SiteHeader } from "@/components/site-header";
 import { BUSINESS_TIMEZONE } from "@/features/booking/slots";
+import { CatalogDeletePanel } from "@/features/admin/catalog-delete-panel";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("uk-UA", {
   timeZone: BUSINESS_TIMEZONE,
@@ -161,6 +162,11 @@ export default async function SuperAdminPage() {
           <StatCard icon={Users} label="Унікальних клієнтів" value={allClientIds.size} />
           <StatCard icon={CalendarDays} label="Усього записів" value={totalBookings} />
         </section>
+
+        <CatalogDeletePanel
+          masters={users.filter((user) => user.staff).map((user) => ({ id: user.id, name: user.staff?.displayName || user.name || "Без імені", detail: user.email ?? user.staff?.username ?? user.id, protected: isSuperAdminEmail(user.email) }))}
+          salons={importedBusinesses.map((business) => ({ id: business.id, name: business.name, detail: business.formattedAddress }))}
+        />
 
         <section className="flex flex-col gap-4">
           <div className="flex items-end justify-between gap-3">
