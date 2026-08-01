@@ -15,6 +15,9 @@ export type MasterListingItem = {
   maxPriceCents: number;
   avgRating?: number;
   reviewCount?: number;
+  currencyCode?: string;
+  profileHref?: string;
+  actionLabel?: string;
 };
 
 const TYPE_LABELS: Record<MasterListingItem["organizationType"], string> = {
@@ -31,7 +34,13 @@ export function MasterListingCard({ item }: { item: MasterListingItem }) {
     .join("")
     .toUpperCase();
 
-  const priceLabel =
+  const priceLabel = item.minPriceCents <= 0
+    ? null
+    : item.currencyCode && item.currencyCode !== "UAH"
+      ? item.minPriceCents === item.maxPriceCents
+        ? `від ${(item.minPriceCents / 100).toLocaleString("uk-UA", { style: "currency", currency: item.currencyCode })}`
+        : `${(item.minPriceCents / 100).toLocaleString("uk-UA", { style: "currency", currency: item.currencyCode })}–${(item.maxPriceCents / 100).toLocaleString("uk-UA", { style: "currency", currency: item.currencyCode })}`
+      :
     item.minPriceCents === item.maxPriceCents
       ? `від ${(item.minPriceCents / 100).toFixed(0)} грн`
       : `${(item.minPriceCents / 100).toFixed(0)}–${(item.maxPriceCents / 100).toFixed(0)} грн`;
@@ -82,14 +91,14 @@ export function MasterListingCard({ item }: { item: MasterListingItem }) {
         )}
 
         <div className="flex items-center justify-between border-t pt-3">
-          <span className="text-primary font-bold">{priceLabel}</span>
+          <span className="text-primary font-bold">{priceLabel ?? "Ціни уточнюються"}</span>
           <Button
-            render={<Link href={`/@${item.username}`} />}
+            render={item.profileHref ? <a href={item.profileHref} target="_blank" rel="noreferrer" /> : <Link href={`/@${item.username}`} />}
             nativeButton={false}
             size="sm"
             className="group gap-1.5"
           >
-            Переглянути слоти
+            {item.actionLabel ?? "Переглянути слоти"}
             <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-1" />
           </Button>
         </div>

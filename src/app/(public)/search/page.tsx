@@ -47,8 +47,12 @@ export default async function SearchPage({
       distinct: ["district"],
     }),
   ]);
-  const cities = [...new Set(cityRows.map((r) => r.city).filter(Boolean))].sort();
-  const districts = [...new Set(districtRows.map((r) => r.district).filter((d): d is string => Boolean(d)))].sort();
+  const importedLocationRows = await prisma.importedBusiness.findMany({
+    where: { publicationStatus: "PUBLISHED" },
+    select: { city: true, district: true },
+  });
+  const cities = [...new Set([...cityRows.map((r) => r.city), ...importedLocationRows.map((r) => r.city)].filter(Boolean))].sort();
+  const districts = [...new Set([...districtRows.map((r) => r.district), ...importedLocationRows.filter((r) => !city || r.city.toLocaleLowerCase().includes(city.toLocaleLowerCase())).map((r) => r.district)].filter((d): d is string => Boolean(d)))].sort();
 
   const minPriceCents = minPrice ? Math.round(Number(minPrice) * 100) : undefined;
   const maxPriceCents = maxPrice ? Math.round(Number(maxPrice) * 100) : undefined;
@@ -84,6 +88,15 @@ export default async function SearchPage({
     },
   });
 
+  const importedRows = type === "solo" ? [] : await prisma.importedBusiness.findMany({
+    where: {
+      publicationStatus: "PUBLISHED",
+      ...(city ? { city: { contains: city, mode: "insensitive" } } : {}),
+      ...(district ? { district: { equals: district, mode: "insensitive" } } : {}),
+    },
+    include: { serviceDrafts: { where: { status: "APPROVED" } } },
+  });
+
   const ratingStats = await getRatingStatsForStaff(staffRows.map((s) => s.id));
 
   let results: (MasterListingItem & { staffId: string })[] = staffRows
@@ -106,6 +119,33 @@ export default async function SearchPage({
         reviewCount: stats?.reviewCount,
       };
     });
+
+  for (const salon of importedRows) {
+    let drafts = salon.serviceDrafts;
+    if (category) drafts = drafts.filter((draft) => draft.categorySlug === category || draft.categorySlug?.startsWith(`${category}.`));
+    if (minPriceCents !== undefined) drafts = drafts.filter((draft) => draft.priceMinor >= minPriceCents);
+    if (maxPriceCents !== undefined) drafts = drafts.filter((draft) => draft.priceMinor <= maxPriceCents);
+    if ((category || minPriceCents !== undefined || maxPriceCents !== undefined) && drafts.length === 0) continue;
+    const prices = drafts.map((draft) => draft.priceMinor);
+    const categoryNames = [...new Set(drafts.map((draft) => draft.categorySlug).filter((value): value is string => Boolean(value)))];
+    results.push({
+      staffId: `imported:${salon.id}`,
+      username: salon.slug,
+      displayName: salon.name,
+      bio: null,
+      city: salon.city,
+      address: salon.formattedAddress,
+      organizationType: "SALON",
+      categoryNames,
+      minPriceCents: prices.length ? Math.min(...prices) : 0,
+      maxPriceCents: prices.length ? Math.max(...prices) : 0,
+      currencyCode: drafts[0]?.currencyCode,
+      avgRating: salon.rating ?? undefined,
+      reviewCount: salon.userRatingCount ?? undefined,
+      profileHref: salon.websiteUri ?? salon.googleMapsUri ?? undefined,
+      actionLabel: salon.websiteUri ? "Відкрити сайт" : "Google Maps",
+    });
+  }
 
   const minRatingNum = minRating ? Number(minRating) : undefined;
   if (minRatingNum !== undefined && !Number.isNaN(minRatingNum)) {

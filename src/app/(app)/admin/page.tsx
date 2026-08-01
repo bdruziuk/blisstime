@@ -115,6 +115,11 @@ export default async function SuperAdminPage() {
       },
     },
   });
+  const importedBusinesses = await prisma.importedBusiness.findMany({
+    where: { publicationStatus: "PUBLISHED" },
+    orderBy: { updatedAt: "desc" },
+    include: { serviceDrafts: { where: { status: "APPROVED" }, orderBy: { displayName: "asc" } } },
+  });
 
   const allClientIds = new Set(
     users.flatMap((user) => user.staff?.bookings.map((booking) => booking.client.id) ?? [])
@@ -155,6 +160,14 @@ export default async function SuperAdminPage() {
           <StatCard icon={CheckCircle2} label="Завершили onboarding" value={onboardedUsers} />
           <StatCard icon={Users} label="Унікальних клієнтів" value={allClientIds.size} />
           <StatCard icon={CalendarDays} label="Усього записів" value={totalBookings} />
+        </section>
+
+        <section className="flex flex-col gap-4">
+          <div className="flex items-end justify-between gap-3">
+            <div><h2 className="font-heading text-2xl font-bold">Імпортовані салони</h2><p className="text-muted-foreground text-sm">Опубліковані заклади без зареєстрованого акаунта власника.</p></div>
+            <span className="text-muted-foreground text-sm">{importedBusinesses.length}</span>
+          </div>
+          {importedBusinesses.length === 0 ? <div className="rounded-xl border border-dashed py-10 text-center text-sm">Опублікованих імпортованих салонів ще немає.</div> : <div className="grid gap-3 sm:grid-cols-2">{importedBusinesses.map((business) => <article key={business.id} className="border-border bg-card rounded-2xl border p-5 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h3 className="font-heading text-lg font-semibold">{business.name}</h3><p className="text-muted-foreground text-sm">{business.formattedAddress}</p></div><span className="bg-emerald-500/10 text-emerald-700 rounded-full px-2 py-0.5 text-xs">опубліковано</span></div><div className="text-muted-foreground mt-3 grid gap-1 text-sm"><p>Місто: {business.city}{business.district ? `, ${business.district}` : ""}</p><p>Рейтинг: {business.rating ?? "—"} ({business.userRatingCount ?? 0})</p><p>Підтверджених послуг: {business.serviceDrafts.length}</p><p>ID: {business.id}</p></div><div className="mt-3 flex gap-4 text-sm">{business.websiteUri && <a href={business.websiteUri} target="_blank" rel="noreferrer" className="text-primary hover:underline">Сайт</a>}{business.googleMapsUri && <a href={business.googleMapsUri} target="_blank" rel="noreferrer" className="text-primary hover:underline">Google Maps</a>}<Link href="/admin/business-import" className="text-primary ml-auto hover:underline">Модерація</Link></div>{business.serviceDrafts.length > 0 && <details className="mt-3 border-t pt-3"><summary className="cursor-pointer text-sm font-semibold">Послуги ({business.serviceDrafts.length})</summary><ul className="mt-2 space-y-1 text-sm">{business.serviceDrafts.map((service) => <li key={service.id} className="flex justify-between gap-3"><span>{service.displayName}</span><span>{(service.priceMinor / 100).toLocaleString("uk-UA", { style: "currency", currency: service.currencyCode })}</span></li>)}</ul></details>}</article>)}</div>}
         </section>
 
         <section className="flex flex-col gap-4">
