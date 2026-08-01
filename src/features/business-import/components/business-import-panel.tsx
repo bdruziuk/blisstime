@@ -90,6 +90,7 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const loadJobs = useCallback(async () => {
     const data = await responseJson<{ jobs: Job[] }>(await fetch("/api/admin/business-import/jobs", { cache: "no-store" }));
@@ -201,12 +202,16 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
 
   async function moderateBusinesses(ids: string[], status: "PUBLISHED" | "REJECTED") {
     try {
-      await responseJson(await fetch("/api/admin/business-import/businesses/bulk-status", {
+      const result = await responseJson<{ updatedCount: number }>(await fetch("/api/admin/business-import/businesses/bulk-status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids, status }),
       }));
+      if (result.updatedCount === 0) throw new Error("Жоден із вибраних салонів не був оновлений");
+      setBusinesses((current) => current.map((business) => ids.includes(business.id) ? { ...business, publicationStatus: status } : business));
+      setNotice(status === "PUBLISHED" ? `Опубліковано салонів: ${result.updatedCount}. Вони доступні в пошуку для свого міста.` : `Відхилено салонів: ${result.updatedCount}.`);
       if (selectedJob) await loadDetails(selectedJob.id);
+      return result.updatedCount;
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Не вдалося змінити статус вибраних закладів");
       throw reason;
@@ -261,6 +266,7 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
           <span>{error}</span><button onClick={() => setError(null)}><X className="size-4" /></button>
         </div>
       )}
+      {notice && <div className="border-emerald-500/30 bg-emerald-500/10 text-emerald-800 flex items-start justify-between rounded-xl border p-4 text-sm dark:text-emerald-300"><span>{notice}</span><button onClick={() => setNotice(null)}><X className="size-4" /></button></div>}
 
       <section className="border-border bg-card rounded-2xl border p-5 shadow-sm">
         <h2 className="font-heading text-xl font-semibold">Новий імпорт</h2>
@@ -330,7 +336,7 @@ function JobProgress({ job, onCancel, onOpen }: { job: Job; onCancel: () => void
 
 function Metric({ label, value }: { label: string; value: string | number }) { return <div><p className="text-muted-foreground text-xs">{label}</p><p className="text-lg font-bold">{value}</p></div>; }
 
-function JobDetails({ job, businesses, categoryMap, onClose, onModerateMany, onRetryTask, onEnrich, onModerateDraft }: { job: Job & { tasks: Task[] }; businesses: ImportedBusiness[]; categoryMap: Map<string, string>; onClose: () => void; onModerateMany: (ids: string[], status: "PUBLISHED" | "REJECTED") => Promise<void>; onRetryTask: (id: string) => void; onEnrich: (id: string) => void; onModerateDraft: (id: string, status: "APPROVED" | "REJECTED") => void }) {
+function JobDetails({ job, businesses, categoryMap, onClose, onModerateMany, onRetryTask, onEnrich, onModerateDraft }: { job: Job & { tasks: Task[] }; businesses: ImportedBusiness[]; categoryMap: Map<string, string>; onClose: () => void; onModerateMany: (ids: string[], status: "PUBLISHED" | "REJECTED") => Promise<number>; onRetryTask: (id: string) => void; onEnrich: (id: string) => void; onModerateDraft: (id: string, status: "APPROVED" | "REJECTED") => void }) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const allSelected = businesses.length > 0 && businesses.every((business) => selectedIds.has(business.id));
