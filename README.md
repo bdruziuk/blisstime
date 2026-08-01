@@ -1,36 +1,154 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EasyService
 
-## Getting Started
+EasyService — українська web-first платформа для beauty-майстрів і їхніх клієнтів. Репозиторій має робочу назву **BlissTime**.
 
-First, run the development server:
+Продукт поєднує:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- кабінет майстра з календарем, послугами, CRM, доходами та Telegram-сповіщеннями;
+- публічний каталог із пошуком, SEO-сторінками та записом без реєстрації;
+- AI-імпорт прайс-листа у структуровані послуги.
+
+## Технології
+
+- Next.js 15 App Router, React 19, TypeScript;
+- Tailwind CSS 4, shadcn/ui та Base UI;
+- PostgreSQL, Prisma 7;
+- Auth.js 5 з email/password;
+- Telegram Bot API;
+- OpenAI API;
+- Vitest для unit-тестів календарної логіки.
+
+## Структура
+
+```text
+src/app/(app)       кабінет, реєстрація та onboarding
+src/app/(public)    лендінг, каталог, профілі й відгуки
+src/app/api         Auth.js, Telegram webhook і worker нагадувань
+src/features        бізнес-модулі за функціональністю
+src/lib             Prisma, Auth.js, Telegram та спільні утиліти
+prisma              схема, міграції та seed
+scripts             локальний Telegram polling
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Кабінет і каталог працюють в одному Next.js застосунку та використовують спільну базу даних.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Вимоги
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Node.js 20 або новіший;
+- npm;
+- PostgreSQL із підтримкою розширення `btree_gist`;
+- Telegram-бот — опційно для локальної розробки;
+- OpenAI API key — опційно для AI-імпорту.
 
-## Learn More
+## Локальний запуск
 
-To learn more about Next.js, take a look at the following resources:
+1. Встановіть залежності:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   npm ci
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Створіть локальний `.env`:
 
-## Deploy on Vercel
+   ```bash
+   cp .env.example .env
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   У PowerShell:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+3. Заповніть щонайменше `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` і `NEXT_PUBLIC_APP_URL`.
+
+4. Застосуйте міграції та заповніть довідник категорій:
+
+   ```bash
+   npx prisma migrate deploy
+   npm run db:seed
+   ```
+
+5. Запустіть dev-сервер:
+
+   ```bash
+   npm run dev
+   ```
+
+Застосунок буде доступний на [http://localhost:3000](http://localhost:3000).
+
+## Змінні середовища
+
+| Змінна | Призначення |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `NEXTAUTH_SECRET` | Секрет підпису Auth.js |
+| `NEXTAUTH_URL` | Базова URL для Auth.js |
+| `NEXT_PUBLIC_APP_URL` | Публічна URL застосунку |
+| `TELEGRAM_BOT_TOKEN` | Токен Telegram-бота |
+| `TELEGRAM_BOT_USERNAME` | Username бота без `@` |
+| `TELEGRAM_WEBHOOK_SECRET` | Перевірка запитів Telegram webhook |
+| `CRON_SECRET` | Захист endpoint нагадувань |
+| `OPENAI_API_KEY` | AI-імпорт прайс-листа |
+| `ALLOW_INDEXING` | Дозволяє індексацію лише за точного значення `true` |
+
+Повний шаблон міститься у `.env.example`. Файл `.env` не можна комітити.
+
+## Команди
+
+```bash
+npm run dev          # локальний Next.js із Turbopack
+npm run build        # production build
+npm run start        # міграції та запуск production-сервера
+npm run start:web    # запуск без автоматичних міграцій
+npm run lint         # ESLint
+npm test             # усі unit-тести один раз
+npm run test:watch   # Vitest у watch-режимі
+npm run db:seed      # довідник категорій послуг
+npm run bot:dev      # Telegram long polling для локальної розробки
+```
+
+## База даних і бронювання
+
+Гроші зберігаються як цілі копійки, а часові значення — в UTC. Бізнес-таймзона зараз фіксована як `Europe/Kyiv`.
+
+PostgreSQL exclusion constraint не дозволяє одному майстру мати записи, що перетинаються. Активні `PENDING` hold також блокують слот. Слоти генеруються з кроком 15 хвилин із робочих годин за вирахуванням записів і блокувань графіка.
+
+Не редагуйте вже застосовані міграції. Зміни схеми оформлюйте новою Prisma-міграцією.
+
+## Telegram
+
+У production Telegram надсилає updates на:
+
+```text
+POST /api/telegram/webhook
+```
+
+Нагадування запускаються scheduler-запитом на:
+
+```text
+GET|POST /api/worker/telegram-reminders
+Authorization: Bearer <CRON_SECRET>
+```
+
+Для локальної розробки без публічного webhook використовуйте `npm run bot:dev`.
+
+## SEO та запуск
+
+До публічного запуску всі маршрути отримують `noindex, nofollow`, а `robots.txt` забороняє crawling. Індексація вмикається тільки через:
+
+```env
+ALLOW_INDEXING=true
+```
+
+Не встановлюйте цю змінну для preview або staging-середовищ.
+
+## Перевірка перед змінами
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+Додаткові продуктові правила та архітектурні обмеження описані в `CLAUDE.md`.
