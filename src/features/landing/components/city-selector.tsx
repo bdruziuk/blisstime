@@ -28,7 +28,7 @@ export function CitySelector() {
     const cookieCity = decodeURIComponent(document.cookie.split("; ").find((item) => item.startsWith(`${COOKIE}=`))?.split("=")[1] ?? "");
     const queryCity = searchParams.get("city") ?? "";
     setSelected(canonicalCityName(queryCity || cookieCity, "UA"));
-    fetch("/api/catalog/cities").then((response) => response.json()).then((data: { cities: City[] }) => setCities(data.cities)).catch(() => setCities([]));
+    fetch("/api/catalog/cities", { cache: "no-store" }).then((response) => response.json()).then((data: { cities: City[] }) => setCities(data.cities)).catch(() => setCities([]));
   }, [searchParams]);
 
   useEffect(() => {

@@ -17,15 +17,24 @@ const CITIES: Array<[string, string[]]> = [
 ];
 
 const CITY_ALIASES = new Map<string, string>();
+function cityKey(value: string) {
+  return value
+    .split(",")[0]
+    .normalize("NFKD")
+    .toLocaleLowerCase()
+    .replace(/\b(?:city|місто|oblast|область|region)\b/giu, "")
+    .replace(/[^a-zа-яіїєґ0-9]+/giu, "");
+}
+
 for (const [canonical, aliases] of CITIES) {
-  CITY_ALIASES.set(canonical.toLocaleLowerCase(), canonical);
-  for (const alias of aliases) CITY_ALIASES.set(alias.toLocaleLowerCase(), canonical);
+  CITY_ALIASES.set(cityKey(canonical), canonical);
+  for (const alias of aliases) CITY_ALIASES.set(cityKey(alias), canonical);
 }
 
 export function canonicalCityName(name: string, countryCode?: string | null) {
   const clean = name.trim().replace(/\s+/g, " ");
   if (!clean) return clean;
-  if (!countryCode || countryCode.toUpperCase() === "UA") return CITY_ALIASES.get(clean.toLocaleLowerCase()) ?? clean;
+  if (!countryCode || countryCode.toUpperCase() === "UA") return CITY_ALIASES.get(cityKey(clean)) ?? clean;
   return clean;
 }
 
