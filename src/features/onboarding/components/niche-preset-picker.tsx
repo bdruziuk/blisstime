@@ -31,7 +31,6 @@ export function NichePresetPicker() {
               disabled={pending}
               className="border-border hover:border-primary hover:bg-accent/60 flex w-full flex-col items-start gap-0.5 rounded-lg border bg-transparent px-3 py-2.5 text-left transition-colors disabled:opacity-50"
             >
-              <span className="text-lg leading-none">{preset.emoji}</span>
               <span className="text-sm font-semibold">{preset.name}</span>
               <span className="text-muted-foreground text-xs">{preset.description}</span>
             </button>
