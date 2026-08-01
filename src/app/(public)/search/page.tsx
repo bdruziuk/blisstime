@@ -8,6 +8,7 @@ import { MasterListingCard, type MasterListingItem } from "@/features/search/com
 import { getRatingStatsForStaff } from "@/features/booking/rating";
 import { canonicalCityName, sameCanonicalCity } from "@/features/business-import/services/city-normalizer";
 import { slugify } from "@/lib/slugify";
+import { canonicalKyivDistrict, sameKyivDistrict } from "@/features/business-import/services/kyiv-district-normalizer";
 
 type SearchPageParams = {
   category?: string;
@@ -69,10 +70,11 @@ export default async function SearchPage({
   });
   const importedCatalogCity = (row: (typeof importedLocationRows)[number]) => canonicalCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode);
   const cities = [...new Set([...cityRows.map((r) => canonicalCityName(r.city, "UA")), ...importedLocationRows.map(importedCatalogCity)].filter(Boolean))].sort();
-  const districtOptions = [...new Set([...districtRows.filter((r) => !city || sameCanonicalCity(r.city, city, "UA")).map((r) => r.district), ...importedLocationRows.filter((r) => !city || sameCanonicalCity(importedCatalogCity(r), city, r.countryCode)).map((r) => r.district)].filter((d): d is string => Boolean(d)))].sort();
+  const districtOptions = [...new Set([...districtRows.filter((r) => !city || sameCanonicalCity(r.city, city, "UA")).map((r) => canonicalKyivDistrict(r.district)), ...importedLocationRows.filter((r) => !city || sameCanonicalCity(importedCatalogCity(r), city, r.countryCode)).map((r) => canonicalKyivDistrict(r.district))].filter((d): d is string => Boolean(d)))].sort((a, b) => a.localeCompare(b, "uk"));
   const isKyiv = Boolean(city && sameCanonicalCity(city, "Київ", "UA"));
   const districts = isKyiv ? districtOptions : [];
-  const district = isKyiv && districtParam ? districtOptions.find((item) => item === districtParam || slugify(item) === districtParam) : undefined;
+  const requestedDistrict = canonicalKyivDistrict(districtParam);
+  const district = isKyiv && requestedDistrict && districtOptions.includes(requestedDistrict) ? requestedDistrict : undefined;
 
   const minPriceCents = minPrice ? Math.round(Number(minPrice) * 100) : undefined;
   const maxPriceCents = maxPrice ? Math.round(Number(maxPrice) * 100) : undefined;
@@ -91,7 +93,6 @@ export default async function SearchPage({
   // Build a single location filter — separate `location:` spreads would
   // overwrite each other, dropping the city filter when a type is also set.
   const locationFilter: Prisma.LocationWhereInput = {};
-  if (district) locationFilter.district = { equals: district, mode: "insensitive" };
   if (type === "salon") locationFilter.organization = { type: "SALON" };
   if (type === "solo") locationFilter.organization = { type: "SOLO" };
 
@@ -107,11 +108,11 @@ export default async function SearchPage({
     },
   });
   if (city) staffRows = staffRows.filter((staff) => sameCanonicalCity(staff.location.city, city, "UA"));
+  if (district) staffRows = staffRows.filter((staff) => sameKyivDistrict(staff.location.district, district));
 
   const importedRows = type === "solo" ? [] : await prisma.importedBusiness.findMany({
     where: {
       publicationStatus: "PUBLISHED",
-      ...(district ? { district: { equals: district, mode: "insensitive" } } : {}),
     },
     include: { serviceDrafts: { where: { status: "APPROVED" } }, importResults: { take: 1, orderBy: { createdAt: "desc" }, include: { job: { include: { city: true } } } } },
   });
@@ -142,6 +143,7 @@ export default async function SearchPage({
   for (const salon of importedRows) {
     const salonCity = canonicalCityName(salon.importResults[0]?.job.city.name ?? salon.city, salon.importResults[0]?.job.city.countryCode ?? salon.countryCode);
     if (city && !sameCanonicalCity(salonCity, city, salon.countryCode)) continue;
+    if (district && !sameKyivDistrict(salon.district, district)) continue;
     let drafts = salon.serviceDrafts;
     if (category) drafts = drafts.filter((draft) => draft.categorySlug === category || draft.categorySlug?.startsWith(`${category}.`));
     if (minPriceCents !== undefined) drafts = drafts.filter((draft) => draft.priceMinor >= minPriceCents);
