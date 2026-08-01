@@ -66,6 +66,12 @@ enum EnrichmentStatus {
   NO_PRICES_FOUND
 }
 
+enum ImportedServiceDraftStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
 model Organization {
   id        String           @id @default(cuid())
   type      OrganizationType
@@ -448,42 +454,46 @@ model BusinessImportTask {
 }
 
 model ImportedBusiness {
-  id                   String                 @id @default(cuid())
-  provider             String
-  externalId           String
-  name                 String
-  slug                 String
-  publicationStatus    ImportedBusinessStatus @default(IMPORT_PENDING_REVIEW)
-  enrichmentStatus     EnrichmentStatus       @default(NOT_STARTED)
-  manualReviewRequired Boolean                @default(false)
-  countryCode          String
-  city                 String
-  district             String?
-  formattedAddress     String
-  lat                  Float
-  lng                  Float
-  nationalPhone        String?
-  internationalPhone   String?
-  normalizedPhone      String?
-  websiteUri           String?
-  normalizedDomain     String?
-  googleMapsUri        String?
-  rating               Float?
-  userRatingCount      Int?
-  primaryType          String?
-  types                Json
-  categories           Json
-  regularOpeningHours  Json?
-  businessStatus       String?
-  normalizedName       String
-  normalizedAddress    String
-  sourceFetchedAt      DateTime
-  lastSyncedAt         DateTime
+  id                    String                 @id @default(cuid())
+  provider              String
+  externalId            String
+  name                  String
+  slug                  String
+  publicationStatus     ImportedBusinessStatus @default(IMPORT_PENDING_REVIEW)
+  enrichmentStatus      EnrichmentStatus       @default(NOT_STARTED)
+  enrichmentError       String?
+  enrichmentStartedAt   DateTime?
+  enrichmentCompletedAt DateTime?
+  manualReviewRequired  Boolean                @default(false)
+  countryCode           String
+  city                  String
+  district              String?
+  formattedAddress      String
+  lat                   Float
+  lng                   Float
+  nationalPhone         String?
+  internationalPhone    String?
+  normalizedPhone       String?
+  websiteUri            String?
+  normalizedDomain      String?
+  googleMapsUri         String?
+  rating                Float?
+  userRatingCount       Int?
+  primaryType           String?
+  types                 Json
+  categories            Json
+  regularOpeningHours   Json?
+  businessStatus        String?
+  normalizedName        String
+  normalizedAddress     String
+  sourceFetchedAt       DateTime
+  lastSyncedAt          DateTime
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   importResults BusinessImportResult[]
+  serviceDrafts ImportedBusinessServiceDraft[]
 
   @@unique([provider, externalId])
   @@unique([slug])
@@ -491,6 +501,27 @@ model ImportedBusiness {
   @@index([normalizedPhone])
   @@index([normalizedDomain])
   @@index([normalizedName, normalizedAddress])
+}
+
+model ImportedBusinessServiceDraft {
+  id              String                     @id @default(cuid())
+  businessId      String
+  displayName     String
+  normalizedName  String
+  priceMinor      Int
+  currencyCode    String
+  durationMinutes Int?
+  categorySlug    String?
+  sourceUrl       String
+  status          ImportedServiceDraftStatus @default(PENDING_REVIEW)
+
+  business ImportedBusiness @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessId, normalizedName, priceMinor, currencyCode])
+  @@index([businessId, status])
 }
 
 model BusinessImportResult {

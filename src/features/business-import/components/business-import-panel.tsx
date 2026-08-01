@@ -51,7 +51,12 @@ type ImportedBusiness = {
   publicationStatus: string;
   manualReviewRequired: boolean;
   googleMapsUri: string | null;
+  websiteUri: string | null;
+  enrichmentStatus: string;
+  enrichmentError: string | null;
+  serviceDrafts: ServiceDraft[];
 };
+type ServiceDraft = { id: string; displayName: string; priceMinor: number; currencyCode: string; durationMinutes: number | null; sourceUrl: string; status: string };
 
 const ACTIVE = new Set(["PENDING", "RUNNING"]);
 const statusLabel: Record<string, string> = {
@@ -192,18 +197,17 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
     }
   }
 
-  async function moderateBusiness(id: string, status: "PUBLISHED" | "REJECTED") {
+  async function moderateBusinesses(ids: string[], status: "PUBLISHED" | "REJECTED") {
     try {
-      await responseJson(
-        await fetch(`/api/admin/business-import/businesses/${id}/status`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status }),
-        })
-      );
+      await responseJson(await fetch("/api/admin/business-import/businesses/bulk-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, status }),
+      }));
       if (selectedJob) await loadDetails(selectedJob.id);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Не вдалося змінити статус");
+      setError(reason instanceof Error ? reason.message : "Не вдалося змінити статус вибраних закладів");
+      throw reason;
     }
   }
 
@@ -216,6 +220,27 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
       if (selectedJob) await loadDetails(selectedJob.id);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Не вдалося повторити task");
+    }
+  }
+
+  async function enrichBusiness(id: string) {
+    setError(null);
+    setBusinesses((current) => current.map((item) => item.id === id ? { ...item, enrichmentStatus: "PROCESSING", enrichmentError: null } : item));
+    try {
+      await responseJson(await fetch(`/api/admin/business-import/businesses/${id}/enrich`, { method: "POST" }));
+      if (selectedJob) await loadDetails(selectedJob.id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Не вдалося імпортувати послуги");
+      if (selectedJob) await loadDetails(selectedJob.id);
+    }
+  }
+
+  async function moderateDraft(id: string, status: "APPROVED" | "REJECTED") {
+    try {
+      await responseJson(await fetch(`/api/admin/business-import/service-drafts/${id}/status`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) }));
+      if (selectedJob) await loadDetails(selectedJob.id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Не вдалося змінити статус послуги");
     }
   }
 
@@ -290,7 +315,7 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
         <div className="overflow-x-auto border-t"><table className="w-full min-w-[960px] text-left text-sm"><thead className="bg-muted/50 text-muted-foreground text-xs"><tr>{["Дата", "Місто", "Категорії", "Статус", "Знайдено", "Створено", "Оновлено", "Помилки", "Автор", ""].map((heading) => <th key={heading} className="px-4 py-3 font-medium">{heading}</th>)}</tr></thead><tbody className="divide-border divide-y">{jobs.map((job) => <tr key={job.id} className="hover:bg-accent/20"><td className="px-4 py-3">{dateFormatter.format(new Date(job.createdAt))}</td><td className="px-4 py-3 font-medium">{job.city.name}<span className="text-muted-foreground block text-xs">{job.city.countryCode}</span></td><td className="px-4 py-3 text-xs">{job.categories.map((key) => categoryMap.get(key) ?? key).join(", ")}</td><td className="px-4 py-3">{statusLabel[job.status] ?? job.status}</td><td className="px-4 py-3">{job.foundCount}</td><td className="px-4 py-3">{job.createdCount}</td><td className="px-4 py-3">{job.updatedCount}</td><td className="px-4 py-3">{job.failedCount}</td><td className="px-4 py-3 text-xs">{job.createdBy?.email ?? "—"}</td><td className="px-4 py-3"><div className="flex"><Button variant="ghost" size="sm" onClick={() => loadDetails(job.id)}>Деталі <ChevronDown /></Button><Button variant="ghost" size="sm" disabled={Boolean(activeJob)} onClick={() => { setSelectedCity(job.city); setCityQuery(""); setCountryCode(job.city.countryCode); setSelectedCategories(job.categories); setIncludeDetails(job.includeDetails); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Повторити</Button></div></td></tr>)}</tbody></table>{jobs.length === 0 && <p className="text-muted-foreground p-10 text-center text-sm">Імпортів ще немає.</p>}</div>
       </section>
 
-      {selectedJob && <JobDetails job={selectedJob} businesses={businesses} categoryMap={categoryMap} onClose={() => setSelectedJob(null)} onModerate={moderateBusiness} onRetryTask={retryTask} />}
+      {selectedJob && <JobDetails job={selectedJob} businesses={businesses} categoryMap={categoryMap} onClose={() => setSelectedJob(null)} onModerateMany={moderateBusinesses} onRetryTask={retryTask} onEnrich={enrichBusiness} onModerateDraft={moderateDraft} />}
       <p className="text-muted-foreground text-center text-xs">Дані про заклади: Google Places. Перевірте вимоги атрибуції Google Maps Platform перед production-публікацією.</p>
     </main>
   );
@@ -303,6 +328,35 @@ function JobProgress({ job, onCancel, onOpen }: { job: Job; onCancel: () => void
 
 function Metric({ label, value }: { label: string; value: string | number }) { return <div><p className="text-muted-foreground text-xs">{label}</p><p className="text-lg font-bold">{value}</p></div>; }
 
-function JobDetails({ job, businesses, categoryMap, onClose, onModerate, onRetryTask }: { job: Job & { tasks: Task[] }; businesses: ImportedBusiness[]; categoryMap: Map<string, string>; onClose: () => void; onModerate: (id: string, status: "PUBLISHED" | "REJECTED") => void; onRetryTask: (id: string) => void }) {
-  return <section className="border-border bg-card rounded-2xl border shadow-sm"><div className="flex items-start justify-between p-5"><div><h2 className="font-heading text-xl font-semibold">Деталі: {job.city.name}</h2><p className="text-muted-foreground text-sm">{statusLabel[job.status]} · {job.id}</p></div><Button variant="ghost" size="icon" onClick={onClose}><X /></Button></div><details open className="border-t"><summary className="cursor-pointer px-5 py-3 font-semibold">Tasks ({job.tasks.length})</summary><div className="max-h-96 overflow-auto border-t"><table className="w-full min-w-[960px] text-left text-xs"><thead className="bg-muted/50"><tr>{["Категорія", "Запит", "Статус", "Bounds", "Depth", "Attempts", "Знайдено", "Помилка", ""].map((heading, index) => <th key={`${heading}-${index}`} className="px-3 py-2">{heading}</th>)}</tr></thead><tbody className="divide-border divide-y">{job.tasks.map((task) => <tr key={task.id}><td className="px-3 py-2">{categoryMap.get(task.category) ?? task.category}</td><td className="px-3 py-2">{task.searchQuery}</td><td className="px-3 py-2">{statusLabel[task.status] ?? task.status}</td><td className="px-3 py-2 font-mono">{task.south.toFixed(3)},{task.west.toFixed(3)} — {task.north.toFixed(3)},{task.east.toFixed(3)}</td><td className="px-3 py-2">{task.depth}</td><td className="px-3 py-2">{task.attempts}</td><td className="px-3 py-2">{task.foundCount}</td><td className="text-destructive max-w-xs px-3 py-2">{task.errorMessage ?? "—"}</td><td className="px-3 py-2">{task.status === "FAILED" && <Button size="xs" variant="outline" onClick={() => onRetryTask(task.id)}>Повторити</Button>}</td></tr>)}</tbody></table></div></details><details open className="border-t"><summary className="cursor-pointer px-5 py-3 font-semibold">Результати на модерації ({businesses.length})</summary><div className="grid gap-2 border-t p-4 sm:grid-cols-2">{businesses.map((business) => <article key={business.id} className="border-border rounded-xl border p-3"><div className="flex justify-between gap-2"><div><h3 className="font-semibold">{business.name}</h3><p className="text-muted-foreground text-xs">{business.formattedAddress}</p></div>{business.manualReviewRequired && <span className="bg-amber-500/10 text-amber-700 h-fit rounded-full px-2 py-0.5 text-xs">можливий дублікат</span>}</div><p className="text-muted-foreground mt-2 text-xs">Рейтинг: {business.rating ?? "—"} ({business.userRatingCount ?? 0}) · {business.publicationStatus}</p><div className="mt-3 flex gap-2"><Button size="sm" disabled={business.publicationStatus === "PUBLISHED"} onClick={() => onModerate(business.id, "PUBLISHED")}><Check />Опублікувати</Button><Button size="sm" variant="destructive" onClick={() => onModerate(business.id, "REJECTED")}><X />Відхилити</Button>{business.googleMapsUri && <a href={business.googleMapsUri} target="_blank" rel="noreferrer" className="text-primary ml-auto self-center text-xs hover:underline">Google Maps</a>}</div><Button size="sm" variant="outline" disabled className="mt-2 w-full">Знайти послуги та ціни — наступний етап</Button></article>)}</div></details></section>;
+function JobDetails({ job, businesses, categoryMap, onClose, onModerateMany, onRetryTask, onEnrich, onModerateDraft }: { job: Job & { tasks: Task[] }; businesses: ImportedBusiness[]; categoryMap: Map<string, string>; onClose: () => void; onModerateMany: (ids: string[], status: "PUBLISHED" | "REJECTED") => Promise<void>; onRetryTask: (id: string) => void; onEnrich: (id: string) => void; onModerateDraft: (id: string, status: "APPROVED" | "REJECTED") => void }) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const allSelected = businesses.length > 0 && businesses.every((business) => selectedIds.has(business.id));
+
+  function toggleSelected(id: string) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function moderateSelected(status: "PUBLISHED" | "REJECTED") {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await onModerateMany([...selectedIds], status);
+      setSelectedIds(new Set());
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+  return <section className="border-border bg-card rounded-2xl border shadow-sm"><div className="flex items-start justify-between p-5"><div><h2 className="font-heading text-xl font-semibold">Деталі: {job.city.name}</h2><p className="text-muted-foreground text-sm">{statusLabel[job.status]} · {job.id}</p></div><Button variant="ghost" size="icon" onClick={onClose}><X /></Button></div><details open className="border-t"><summary className="cursor-pointer px-5 py-3 font-semibold">Tasks ({job.tasks.length})</summary><div className="max-h-96 overflow-auto border-t"><table className="w-full min-w-[960px] text-left text-xs"><thead className="bg-muted/50"><tr>{["Категорія", "Запит", "Статус", "Bounds", "Depth", "Attempts", "Знайдено", "Помилка", ""].map((heading, index) => <th key={`${heading}-${index}`} className="px-3 py-2">{heading}</th>)}</tr></thead><tbody className="divide-border divide-y">{job.tasks.map((task) => <tr key={task.id}><td className="px-3 py-2">{categoryMap.get(task.category) ?? task.category}</td><td className="px-3 py-2">{task.searchQuery}</td><td className="px-3 py-2">{statusLabel[task.status] ?? task.status}</td><td className="px-3 py-2 font-mono">{task.south.toFixed(3)},{task.west.toFixed(3)} — {task.north.toFixed(3)},{task.east.toFixed(3)}</td><td className="px-3 py-2">{task.depth}</td><td className="px-3 py-2">{task.attempts}</td><td className="px-3 py-2">{task.foundCount}</td><td className="text-destructive max-w-xs px-3 py-2">{task.errorMessage ?? "—"}</td><td className="px-3 py-2">{task.status === "FAILED" && <Button size="xs" variant="outline" onClick={() => onRetryTask(task.id)}>Повторити</Button>}</td></tr>)}</tbody></table></div></details><details open className="border-t"><summary className="cursor-pointer px-5 py-3 font-semibold">Результати на модерації ({businesses.length})</summary><div className="flex flex-wrap items-center gap-3 border-t px-4 py-3"><label className="flex cursor-pointer items-center gap-2 text-sm font-medium"><input type="checkbox" checked={allSelected} onChange={() => setSelectedIds(allSelected ? new Set() : new Set(businesses.map((business) => business.id)))} />Вибрати всі</label><span className="text-muted-foreground text-xs">Вибрано: {selectedIds.size}</span><Button size="sm" disabled={selectedIds.size === 0 || bulkLoading} onClick={() => moderateSelected("PUBLISHED")}>{bulkLoading ? <Loader2 className="animate-spin" /> : <Check />}Імпортувати вибрані</Button><Button size="sm" variant="destructive" disabled={selectedIds.size === 0 || bulkLoading} onClick={() => moderateSelected("REJECTED")}><X />Відхилити вибрані</Button></div><div className="grid gap-2 border-t p-4 sm:grid-cols-2">{businesses.map((business) => <BusinessCard key={business.id} business={business} selected={selectedIds.has(business.id)} onToggle={() => toggleSelected(business.id)} onEnrich={onEnrich} onModerateDraft={onModerateDraft} />)}</div></details></section>;
+}
+
+function BusinessCard({ business, selected, onToggle, onEnrich, onModerateDraft }: { business: ImportedBusiness; selected: boolean; onToggle: () => void; onEnrich: (id: string) => void; onModerateDraft: (id: string, status: "APPROVED" | "REJECTED") => void }) {
+  const validWebsite = (() => { try { const url = new URL(business.websiteUri ?? ""); return ["http:", "https:"].includes(url.protocol); } catch { return false; } })();
+  const processing = ["QUEUED", "PROCESSING"].includes(business.enrichmentStatus);
+  const badge = !validWebsite ? "Недоступно: немає сайту" : business.enrichmentStatus === "NOT_STARTED" ? "Можна імпортувати" : business.enrichmentStatus === "COMPLETED" ? `Знайдено: ${business.serviceDrafts.length}` : business.enrichmentStatus === "NO_PRICES_FOUND" ? "Ціни не знайдено" : business.enrichmentStatus === "FAILED" ? "Помилка імпорту" : "Імпорт виконується";
+  return <article className={`rounded-xl border p-3 ${selected ? "border-primary bg-primary/5" : "border-border"}`}><div className="flex justify-between gap-2"><label className="flex cursor-pointer items-start gap-3"><input type="checkbox" checked={selected} onChange={onToggle} className="mt-1 size-4" aria-label={`Вибрати ${business.name}`} /><div><h3 className="font-semibold">{business.name}</h3><p className="text-muted-foreground text-xs">{business.formattedAddress}</p></div></label><span className={`h-fit rounded-full px-2 py-0.5 text-xs ${validWebsite ? "bg-emerald-500/10 text-emerald-700" : "bg-muted text-muted-foreground"}`}>{badge}</span></div><p className="text-muted-foreground mt-2 text-xs">Рейтинг: {business.rating ?? "—"} ({business.userRatingCount ?? 0}) · {business.publicationStatus}</p>{business.enrichmentError && <p className="text-destructive mt-2 text-xs">{business.enrichmentError}</p>}{business.googleMapsUri && <a href={business.googleMapsUri} target="_blank" rel="noreferrer" className="text-primary mt-2 inline-block text-xs hover:underline">Google Maps</a>}<Button size="sm" variant="outline" disabled={!validWebsite || processing} className="mt-2 w-full" onClick={() => onEnrich(business.id)}>{processing && <Loader2 className="animate-spin" />}{business.enrichmentStatus === "NOT_STARTED" ? "Знайти послуги та ціни" : "Повторити пошук послуг і цін"}</Button>{business.serviceDrafts.length > 0 && <div className="mt-3 space-y-2 border-t pt-3">{business.serviceDrafts.map((draft) => <div key={draft.id} className="bg-muted/40 rounded-lg p-2 text-xs"><div className="flex items-start justify-between gap-2"><div><strong>{draft.displayName}</strong><p>{(draft.priceMinor / 100).toLocaleString("uk-UA", { style: "currency", currency: draft.currencyCode })}{draft.durationMinutes ? ` · ${draft.durationMinutes} хв` : ""}</p></div><span>{draft.status}</span></div>{draft.status === "PENDING_REVIEW" && <div className="mt-2 flex gap-2"><Button size="xs" onClick={() => onModerateDraft(draft.id, "APPROVED")}><Check />Підтвердити</Button><Button size="xs" variant="outline" onClick={() => onModerateDraft(draft.id, "REJECTED")}><X />Відхилити</Button><a className="text-primary ml-auto self-center hover:underline" href={draft.sourceUrl} target="_blank" rel="noreferrer">Джерело</a></div>}</div>)}</div>}</article>;
 }

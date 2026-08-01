@@ -15,7 +15,7 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
       tasks: { orderBy: [{ depth: "asc" }, { createdAt: "asc" }] },
       results: {
         orderBy: { updatedAt: "desc" },
-        include: { business: true },
+        include: { business: { include: { serviceDrafts: { orderBy: { createdAt: "asc" } } } } },
       },
     },
   });
