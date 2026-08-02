@@ -27,7 +27,11 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
     return () => window.removeEventListener("catalog-city-change", update);
   }, []);
 
-  const searchHref = (service = "all") => selectedCity ? selectedCity === "Київ" ? `/${slugify(selectedCity)}/all/${service}` : `/${slugify(selectedCity)}/${service}` : service === "all" ? "/search" : `/search?category=${service}`;
+  const searchHref = (service = "all") => selectedCity
+    ? selectedCity === "Київ"
+      ? `/${slugify(selectedCity)}/all/${service}`
+      : `/${slugify(selectedCity)}/${service}`
+    : `/all/${service}`;
 
   function submitSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
