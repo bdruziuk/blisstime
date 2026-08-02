@@ -29,6 +29,7 @@ export async function SiteHeader() {
   return (
     <header className="border-border bg-card/70 sticky top-0 z-10 border-b backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
+        {session?.user && <SiteHeaderMobileMenu isAdmin={isSuperAdminEmail(session.user.email)} />}
         <Link href="/dashboard">
           <Logo className="text-lg" />
         </Link>
@@ -75,7 +76,6 @@ export async function SiteHeader() {
             </form>
           )}
         </nav>
-        {session?.user && <SiteHeaderMobileMenu isAdmin={isSuperAdminEmail(session.user.email)} />}
       </div>
     </header>
   );
