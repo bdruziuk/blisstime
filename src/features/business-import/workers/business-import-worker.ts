@@ -7,6 +7,7 @@ import { approximateCellSizeKm, containsCoordinates, splitArea } from "../servic
 import { uniqueByExternalId } from "../services/deduplicator";
 import { upsertImportedBusiness, type UpsertOutcome } from "../services/business-upsert";
 import { canonicalCityName } from "../services/city-normalizer";
+import { mergeNameCategories } from "../services/name-category-classifier";
 
 type ClaimedTask = {
   id: string;
@@ -198,12 +199,10 @@ async function processClaimedTask(task: ClaimedTask, provider: BusinessImportPro
     try {
       const freshExisting = await getFreshExisting(summary.externalId);
       if (freshExisting) {
-        const categories = Array.from(
-          new Set([
-            ...(Array.isArray(freshExisting.categories) ? (freshExisting.categories as string[]) : []),
-            task.category,
-          ])
-        );
+        const categories = mergeNameCategories(summary.name, [
+          ...(Array.isArray(freshExisting.categories) ? (freshExisting.categories as string[]) : []),
+          task.category,
+        ]);
         await prisma.importedBusiness.update({
           where: { id: freshExisting.id },
           data: { categories, city: canonicalCityName(job.city.name, job.city.countryCode), regionalCenter: job.city.regionalCenter },

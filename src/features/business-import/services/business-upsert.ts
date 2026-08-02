@@ -5,6 +5,7 @@ import { slugify } from "@/lib/slugify";
 import { findPotentialDuplicate } from "./deduplicator";
 import { normalizeComparableText, normalizeDomain, normalizeImportedPhone } from "./normalizer";
 import { canonicalCityName } from "./city-normalizer";
+import { mergeNameCategories } from "./name-category-classifier";
 
 export type UpsertOutcome = "created" | "updated" | "duplicate";
 export type UpsertResult = { outcome: UpsertOutcome; businessId: string };
@@ -38,9 +39,10 @@ export async function upsertImportedBusiness({
   const normalizedDomain = normalizeDomain(details.websiteUri);
   const normalizedName = normalizeComparableText(details.name);
   const normalizedAddress = normalizeComparableText(details.formattedAddress);
-  const categories = Array.from(
-    new Set([...(Array.isArray(existing?.categories) ? (existing.categories as string[]) : []), category])
-  );
+  const categories = mergeNameCategories(details.name, [
+    ...(Array.isArray(existing?.categories) ? (existing.categories as string[]) : []),
+    category,
+  ]);
   // Google frequently returns a suburb/locality (for example Sofiivska
   // Borshchahivka) for a place inside the selected import area. The selected
   // import city is the authoritative catalog city; locality remains in address.

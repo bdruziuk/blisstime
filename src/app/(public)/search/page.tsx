@@ -13,6 +13,7 @@ import { getRatingStatsForStaff } from "@/features/booking/rating";
 import { canonicalCityName, catalogCityName, sameCanonicalCity } from "@/features/business-import/services/city-normalizer";
 import { slugify } from "@/lib/slugify";
 import { canonicalKyivDistrict, sameKyivDistrict } from "@/features/business-import/services/kyiv-district-normalizer";
+import { PUBLIC_CATEGORY_IMPORT_KEYS, publicCategorySlugs } from "@/features/business-import/services/name-category-classifier";
 
 type SearchPageParams = {
   q?: string;
@@ -158,19 +159,26 @@ export default async function SearchPage({
     ...(minPriceCents !== undefined ? { priceMinor: { gte: minPriceCents } } : {}),
     ...(maxPriceCents !== undefined ? { priceMinor: { lte: maxPriceCents } } : {}),
   };
+  const importedCategoryKeys = category ? PUBLIC_CATEGORY_IMPORT_KEYS[category] ?? [] : [];
+  const hasPriceFilter = minPriceCents !== undefined || maxPriceCents !== undefined;
+  const importedCategoryFilter: Prisma.ImportedBusinessWhereInput | null = hasPriceFilter
+    ? { serviceDrafts: { some: importedServiceFilter } }
+    : category
+      ? { OR: [{ serviceDrafts: { some: importedServiceFilter } }, ...importedCategoryKeys.map((key) => ({ categories: { array_contains: [key] } }))] }
+      : null;
+  const importedTextFilter: Prisma.ImportedBusinessWhereInput | null = q ? { OR: [
+    { name: { contains: q, mode: "insensitive" } },
+    { formattedAddress: { contains: q, mode: "insensitive" } },
+    { nationalPhone: { contains: q } },
+    { internationalPhone: { contains: q } },
+    { websiteUri: { contains: q, mode: "insensitive" } },
+    { serviceDrafts: { some: { status: "APPROVED", displayName: { contains: q, mode: "insensitive" } } } },
+  ] } : null;
   const importedRows = type === "solo" || matchingImportedIds?.length === 0 ? [] : await prisma.importedBusiness.findMany({
     where: {
       publicationStatus: "PUBLISHED",
       ...(matchingImportedIds ? { id: { in: matchingImportedIds } } : {}),
-      ...((category || minPriceCents !== undefined || maxPriceCents !== undefined) ? { serviceDrafts: { some: importedServiceFilter } } : {}),
-      ...(q ? { OR: [
-        { name: { contains: q, mode: "insensitive" } },
-        { formattedAddress: { contains: q, mode: "insensitive" } },
-        { nationalPhone: { contains: q } },
-        { internationalPhone: { contains: q } },
-        { websiteUri: { contains: q, mode: "insensitive" } },
-        { serviceDrafts: { some: { status: "APPROVED", displayName: { contains: q, mode: "insensitive" } } } },
-      ] } : {}),
+      ...((importedCategoryFilter || importedTextFilter) ? { AND: [importedCategoryFilter, importedTextFilter].filter((filter): filter is Prisma.ImportedBusinessWhereInput => Boolean(filter)) } : {}),
     },
     include: { serviceDrafts: { where: { status: "APPROVED" } }, importResults: { take: 1, orderBy: { createdAt: "desc" }, include: { job: { include: { city: true } } } } },
   });
@@ -205,13 +213,15 @@ export default async function SearchPage({
     const salonCity = canonicalCityName(salon.importResults[0]?.job.city.name ?? salon.city, salon.importResults[0]?.job.city.countryCode ?? salon.countryCode);
     if (city && !sameCanonicalCity(salonCity, city, salon.countryCode)) continue;
     if (district && !sameKyivDistrict(salon.district, district)) continue;
+    const inferredCategorySlugs = publicCategorySlugs(salon.categories);
+    const matchesInferredCategory = Boolean(category && inferredCategorySlugs.includes(category));
     let drafts = salon.serviceDrafts;
     if (category) drafts = drafts.filter((draft) => draft.categorySlug === category || draft.categorySlug?.startsWith(`${category}.`));
     if (minPriceCents !== undefined) drafts = drafts.filter((draft) => draft.priceMinor >= minPriceCents);
     if (maxPriceCents !== undefined) drafts = drafts.filter((draft) => draft.priceMinor <= maxPriceCents);
-    if ((category || minPriceCents !== undefined || maxPriceCents !== undefined) && drafts.length === 0) continue;
+    if ((hasPriceFilter || (category && !matchesInferredCategory)) && drafts.length === 0) continue;
     const prices = drafts.map((draft) => draft.priceMinor);
-    const categoryNames = [...new Set(drafts.map((draft) => draft.categorySlug).filter((value): value is string => Boolean(value)))];
+    const categoryNames = [...new Set([...drafts.map((draft) => draft.categorySlug).filter((value): value is string => Boolean(value)), ...inferredCategorySlugs])];
     results.push({
       staffId: `imported:${salon.id}`,
       username: salon.slug,

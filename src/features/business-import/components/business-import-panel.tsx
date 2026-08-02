@@ -96,6 +96,7 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [regionalCenterBackfill, setRegionalCenterBackfill] = useState<{ running: boolean; processed: number; remaining: number | null }>({ running: false, processed: 0, remaining: null });
+  const [categoryBackfill, setCategoryBackfill] = useState<{ running: boolean; scanned: number; updated: number }>({ running: false, scanned: 0, updated: 0 });
 
   const loadJobs = useCallback(async () => {
     const data = await responseJson<{ jobs: Job[]; total: number }>(await fetch("/api/admin/business-import/jobs?offset=0&limit=1", { cache: "no-store" }));
@@ -214,6 +215,34 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
       setError(reason instanceof Error ? reason.message : "Не вдалося перерахувати обласні центри");
     } finally {
       setRegionalCenterBackfill((current) => ({ ...current, running: false }));
+    }
+  }
+
+  async function backfillCategories() {
+    setError(null);
+    setNotice(null);
+    setCategoryBackfill({ running: true, scanned: 0, updated: 0 });
+    let cursor: string | null = null;
+    let scanned = 0;
+    let updated = 0;
+    try {
+      while (true) {
+        const suffix: string = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+        const result: { scanned: number; updated: number; nextCursor: string | null; done: boolean } = await responseJson<{ scanned: number; updated: number; nextCursor: string | null; done: boolean }>(
+          await fetch(`/api/admin/business-import/categories/backfill${suffix}`, { method: "POST" })
+        );
+        scanned += result.scanned;
+        updated += result.updated;
+        setCategoryBackfill({ running: true, scanned, updated });
+        if (result.done) break;
+        if (!result.nextCursor) throw new Error("Не вдалося продовжити аналіз категорій");
+        cursor = result.nextCursor;
+      }
+      setNotice(`Категорії проаналізовано. Перевірено: ${scanned}, оновлено: ${updated}.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Не вдалося проаналізувати категорії");
+    } finally {
+      setCategoryBackfill((current) => ({ ...current, running: false }));
     }
   }
 
@@ -366,7 +395,7 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div><p className="text-sm font-medium">Обласні центри України</p>{regionalCenterBackfill.remaining !== null && <p className="text-muted-foreground text-xs">Оброблено: {regionalCenterBackfill.processed} · залишилось: {regionalCenterBackfill.remaining}</p>}</div>
-                <Button type="button" variant="outline" size="sm" disabled={regionalCenterBackfill.running} onClick={backfillRegionalCenters}>{regionalCenterBackfill.running ? <Loader2 className="animate-spin" /> : <RefreshCw />}Перерахувати</Button>
+                <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" size="sm" disabled={categoryBackfill.running} onClick={backfillCategories}>{categoryBackfill.running ? <Loader2 className="animate-spin" /> : <Search />}Категорії{categoryBackfill.running ? ` ${categoryBackfill.scanned}/${categoryBackfill.updated}` : ""}</Button><Button type="button" variant="outline" size="sm" disabled={regionalCenterBackfill.running} onClick={backfillRegionalCenters}>{regionalCenterBackfill.running ? <Loader2 className="animate-spin" /> : <RefreshCw />}Перерахувати центри</Button></div>
               </div>
               <div className="mt-2 grid max-h-72 grid-cols-2 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-2">
                 {regionalCenters.map((center) => (
