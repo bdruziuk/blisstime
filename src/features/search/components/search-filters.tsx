@@ -213,8 +213,12 @@ export function SearchFilters({
     const data = new FormData(form);
     const city = String(data.get("city") ?? "");
     if (!city) {
-      const q = String(data.get("q") ?? "");
-      router.push(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
+      const query = new URLSearchParams();
+      for (const key of ["q", "category", "type", "minPrice", "maxPrice", "minRating", "sort"]) {
+        const value = String(data.get(key) ?? "");
+        if (value && value !== "all" && value !== "default") query.set(key, value);
+      }
+      router.push(query.size ? `/search?${query}` : "/search");
       return;
     }
     const district = String(data.get("district") ?? "");
