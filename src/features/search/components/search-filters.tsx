@@ -255,7 +255,7 @@ export function SearchFilters({
   const selectedRating = defaultValues.minRating ?? "";
 
   return (
-    <aside className="w-full shrink-0 lg:sticky lg:top-6 lg:w-64">
+    <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:w-64 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
       <form
         ref={formRef}
         onSubmit={(event) => { event.preventDefault(); submitToCatalog(event.currentTarget); }}
