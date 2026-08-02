@@ -18,16 +18,19 @@ export default async function SuperAdminPage() {
   if (!currentUser) redirect("/login");
   if (!isSuperAdminEmail(currentUser.email)) return <AccessDenied email={currentUser.email} />;
 
-  const users = await prisma.user.findMany({
-    select: {
-      staff: {
-        select: {
-          onboardedAt: true,
-          bookings: { select: { clientId: true } },
+  const [users, unownedSalons] = await Promise.all([
+    prisma.user.findMany({
+      select: {
+        staff: {
+          select: {
+            onboardedAt: true,
+            bookings: { select: { clientId: true } },
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.importedBusiness.count({ where: { claimedByStaffId: null } }),
+  ]);
   const clientIds = new Set(users.flatMap((user) => user.staff?.bookings.map((booking) => booking.clientId) ?? []));
   const onboardedUsers = users.filter((user) => user.staff?.onboardedAt).length;
   const totalBookings = users.reduce((sum, user) => sum + (user.staff?.bookings.length ?? 0), 0);
@@ -54,11 +57,12 @@ export default async function SuperAdminPage() {
           <p className="text-muted-foreground text-sm">Вхід: {currentUser.email}</p>
         </header>
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard icon={UserRound} label="Акаунтів" value={users.length} />
           <StatCard icon={CheckCircle2} label="Завершили onboarding" value={onboardedUsers} />
           <StatCard icon={Users} label="Унікальних клієнтів" value={clientIds.size} />
           <StatCard icon={CalendarDays} label="Усього записів" value={totalBookings} />
+          <StatCard icon={Building2} label="Салонів без власника" value={unownedSalons} />
         </section>
 
         <SalonManagementPanel />

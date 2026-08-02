@@ -13,14 +13,92 @@ export async function GET(request: Request) {
   const page = Math.max(0, Number(url.searchParams.get("page") ?? 0) || 0);
   const filter = url.searchParams.get("filter") ?? "all";
   const query = (url.searchParams.get("query") ?? "").trim().toLocaleLowerCase().slice(0, 100);
+
+  const staffDetails = {
+    displayName: true,
+    username: true,
+    telegramChatId: true,
+    confirmationMode: true,
+    user: { select: { email: true } },
+    services: { select: { isActive: true } },
+    bookings: { select: { clientId: true } },
+  } as const;
   const [imported, manual] = await Promise.all([
-    filter === "manual" ? [] : prisma.importedBusiness.findMany({ select: { id: true, name: true, formattedAddress: true, city: true, publicationStatus: true, ownerClaimToken: true, claimedByStaffId: true, claimedByStaff: { select: { displayName: true, user: { select: { email: true } } } } } }),
-    filter === "imported_unowned" || filter === "imported_owned" ? [] : prisma.staff.findMany({ where: { onboardedAt: { not: null }, claimedImportedBusiness: null }, select: { id: true, userId: true, displayName: true, isPublished: true, user: { select: { email: true } }, location: { select: { address: true, city: true, organization: { select: { name: true } } } } } }),
+    filter === "manual" ? [] : prisma.importedBusiness.findMany({
+      select: {
+        id: true, name: true, formattedAddress: true, city: true, publicationStatus: true,
+        ownerClaimToken: true, claimedByStaffId: true, nationalPhone: true, internationalPhone: true,
+        rating: true, userRatingCount: true, updatedAt: true,
+        claimedByStaff: { select: staffDetails },
+        _count: { select: { serviceDrafts: { where: { status: "APPROVED" } } } },
+      },
+    }),
+    filter === "imported_unowned" || filter === "imported_owned" ? [] : prisma.staff.findMany({
+      where: { onboardedAt: { not: null }, claimedImportedBusiness: null },
+      select: {
+        id: true, userId: true, displayName: true, username: true, isPublished: true,
+        telegramChatId: true, confirmationMode: true, updatedAt: true,
+        user: { select: { email: true } },
+        services: { select: { isActive: true } },
+        bookings: { select: { clientId: true } },
+        location: { select: { address: true, city: true, organization: { select: { name: true, type: true } } } },
+      },
+    }),
   ]);
+
+  const metrics = (staff: { telegramChatId: string | null; confirmationMode: string; username: string; services: { isActive: boolean }[]; bookings: { clientId: string }[] } | null) => ({
+    telegramConnected: staff ? Boolean(staff.telegramChatId) : null,
+    confirmationMode: staff?.confirmationMode ?? null,
+    clientCount: staff ? new Set(staff.bookings.map((booking) => booking.clientId)).size : 0,
+    bookingCount: staff?.bookings.length ?? 0,
+    serviceCount: staff?.services.length ?? 0,
+    activeServiceCount: staff?.services.filter((service) => service.isActive).length ?? 0,
+    publicProfileUrl: staff ? `${SITE_URL}/@${staff.username}` : null,
+  });
+
   let items = [
-    ...imported.filter((item) => filter === "all" || (filter === "imported_owned" ? item.claimedByStaffId : !item.claimedByStaffId)).map((item) => ({ id: item.id, deleteId: item.id, kind: item.claimedByStaffId ? "imported_owned" : "imported_unowned", name: item.name, address: item.formattedAddress, city: item.city, owner: item.claimedByStaff ? item.claimedByStaff.displayName || item.claimedByStaff.user.email : null, claimToken: item.ownerClaimToken, publicationStatus: item.publicationStatus })),
-    ...manual.map((item) => ({ id: item.id, deleteId: item.userId, kind: "manual", name: item.location.organization.name || item.displayName, address: item.location.address, city: item.location.city, owner: item.displayName || item.user.email, claimToken: null, publicationStatus: item.isPublished ? "PUBLISHED" : "REJECTED" })),
+    ...imported
+      .filter((item) => filter === "all" || (filter === "imported_owned" ? item.claimedByStaffId : !item.claimedByStaffId))
+      .map((item) => ({
+        id: item.id,
+        deleteId: item.id,
+        kind: item.claimedByStaffId ? "imported_owned" as const : "imported_unowned" as const,
+        name: item.name,
+        address: item.formattedAddress,
+        city: item.city,
+        owner: item.claimedByStaff ? item.claimedByStaff.displayName || item.claimedByStaff.user.email : null,
+        ownerEmail: item.claimedByStaff?.user.email ?? null,
+        claimToken: item.ownerClaimToken,
+        publicationStatus: item.publicationStatus,
+        phone: item.internationalPhone || item.nationalPhone,
+        rating: item.rating,
+        userRatingCount: item.userRatingCount,
+        importedServiceCount: item._count.serviceDrafts,
+        organizationType: "SALON",
+        updatedAt: item.updatedAt,
+        ...metrics(item.claimedByStaff),
+      })),
+    ...manual.map((item) => ({
+      id: item.id,
+      deleteId: item.userId,
+      kind: "manual" as const,
+      name: item.location.organization.name || item.displayName,
+      address: item.location.address,
+      city: item.location.city,
+      owner: item.displayName || item.user.email,
+      ownerEmail: item.user.email,
+      claimToken: null,
+      publicationStatus: item.isPublished ? "PUBLISHED" : "REJECTED",
+      phone: null,
+      rating: null,
+      userRatingCount: null,
+      importedServiceCount: 0,
+      organizationType: item.location.organization.type,
+      updatedAt: item.updatedAt,
+      ...metrics(item),
+    })),
   ].sort((a, b) => a.name.localeCompare(b.name, "uk"));
+
   if (query) items = items.filter((item) => item.name.toLocaleLowerCase().includes(query));
   const total = items.length;
   items = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -31,5 +109,9 @@ export async function GET(request: Request) {
       item.claimToken = token;
     }
   }
-  return NextResponse.json({ items: items.map((item) => ({ ...item, claimUrl: item.claimToken ? `${SITE_URL}/register?claim=${item.claimToken}` : null })), total, hasMore: (page + 1) * PAGE_SIZE < total });
+  return NextResponse.json({
+    items: items.map((item) => ({ ...item, claimUrl: item.claimToken ? `${SITE_URL}/register?claim=${item.claimToken}` : null })),
+    total,
+    hasMore: (page + 1) * PAGE_SIZE < total,
+  });
 }

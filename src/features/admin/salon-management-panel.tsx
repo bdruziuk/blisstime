@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, EyeOff, Loader2, Trash2 } from "lucide-react";
+import { CalendarDays, Check, Clock, Copy, ExternalLink, EyeOff, Loader2, MessageCircle, Phone, Scissors, Star, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -13,8 +13,22 @@ type Item = {
   address: string;
   city: string;
   owner: string | null;
+  ownerEmail: string | null;
   claimUrl: string | null;
   publicationStatus: string;
+  phone: string | null;
+  rating: number | null;
+  userRatingCount: number | null;
+  importedServiceCount: number;
+  organizationType: string;
+  telegramConnected: boolean | null;
+  confirmationMode: string | null;
+  clientCount: number;
+  bookingCount: number;
+  serviceCount: number;
+  activeServiceCount: number;
+  publicProfileUrl: string | null;
+  updatedAt: string;
 };
 
 const FILTERS = [
@@ -182,6 +196,19 @@ export function SalonManagementPanel() {
                   </div>
                   <p className="text-muted-foreground mt-1 text-sm">{item.city}{item.address ? ` · ${item.address}` : ""}</p>
                   {item.owner && <p className="mt-1 text-sm">Власник: {item.owner}</p>}
+                  {item.ownerEmail && <p className="text-muted-foreground text-xs">{item.ownerEmail}</p>}
+                  <div className="text-muted-foreground mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                    <p>Тип: {item.organizationType === "SOLO" ? "майстер" : "салон"}</p>
+                    {item.telegramConnected !== null && <p className="flex items-center gap-1.5"><MessageCircle className="size-3.5" />Telegram: {item.telegramConnected ? "підключено" : "не підключено"}</p>}
+                    {item.phone && <p className="flex items-center gap-1.5"><Phone className="size-3.5" /><a href={`tel:${item.phone}`} className="hover:text-foreground">{item.phone}</a></p>}
+                    <p className="flex items-center gap-1.5"><Users className="size-3.5" />Клієнтів: {item.clientCount}</p>
+                    <p className="flex items-center gap-1.5"><CalendarDays className="size-3.5" />Записів: {item.bookingCount}</p>
+                    <p className="flex items-center gap-1.5"><Scissors className="size-3.5" />Послуг: {item.kind === "imported_unowned" ? item.importedServiceCount : `${item.activeServiceCount} активних / ${item.serviceCount}`}</p>
+                    {item.rating !== null && <p className="flex items-center gap-1.5"><Star className="size-3.5" />Google: {item.rating} ({item.userRatingCount ?? 0})</p>}
+                    {item.confirmationMode && <p className="flex items-center gap-1.5"><Check className="size-3.5" />Підтвердження: {item.confirmationMode === "AUTO" ? "автоматичне" : "ручне"}</p>}
+                    <p className="flex items-center gap-1.5"><Clock className="size-3.5" />Оновлено: {new Date(item.updatedAt).toLocaleDateString("uk-UA")}</p>
+                  </div>
+                  {item.publicProfileUrl && <a href={item.publicProfileUrl} target="_blank" rel="noreferrer" className="text-primary mt-3 inline-flex items-center gap-1 text-xs hover:underline">Публічний профіль <ExternalLink className="size-3" /></a>}
                   {item.claimUrl && <div className="mt-3 flex gap-2"><input readOnly value={item.claimUrl} className="border-input bg-background min-w-0 flex-1 rounded-md border px-2 text-xs" /><Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(item.claimUrl!)}><Copy />Копіювати</Button></div>}
                 </div>
               </div>
