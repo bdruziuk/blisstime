@@ -225,19 +225,22 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
     let cursor: string | null = null;
     let scanned = 0;
     let updated = 0;
+    let failed = 0;
     try {
       while (true) {
         const suffix: string = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
-        const result: { scanned: number; updated: number; nextCursor: string | null; done: boolean } = await responseJson<{ scanned: number; updated: number; nextCursor: string | null; done: boolean }>(
+        const result: { scanned: number; updated: number; failed: number; nextCursor: string | null; done: boolean } = await responseJson<{ scanned: number; updated: number; failed: number; nextCursor: string | null; done: boolean }>(
           await fetch(`/api/admin/business-import/categories/backfill${suffix}`, { method: "POST" })
         );
         scanned += result.scanned;
         updated += result.updated;
+        failed += result.failed;
         setCategoryBackfill({ running: true, scanned, updated });
         if (result.done) break;
         if (!result.nextCursor) throw new Error("Не вдалося продовжити аналіз категорій");
         cursor = result.nextCursor;
       }
+      if (failed > 0) throw new Error(`Категорії частково оновлено: ${updated}. Не вдалося оновити: ${failed}. Запустіть аналіз повторно.`);
       setNotice(`Категорії проаналізовано. Перевірено: ${scanned}, оновлено: ${updated}.`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Не вдалося проаналізувати категорії");
