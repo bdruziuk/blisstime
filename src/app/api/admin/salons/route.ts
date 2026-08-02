@@ -12,6 +12,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const page = Math.max(0, Number(url.searchParams.get("page") ?? 0) || 0);
   const filter = url.searchParams.get("filter") ?? "all";
+  const visibility = url.searchParams.get("visibility") ?? "all";
+  const city = (url.searchParams.get("city") ?? "").trim();
   const query = (url.searchParams.get("query") ?? "").trim().toLocaleLowerCase().slice(0, 100);
 
   const staffDetails = {
@@ -99,7 +101,16 @@ export async function GET(request: Request) {
     })),
   ].sort((a, b) => a.name.localeCompare(b.name, "uk"));
 
+  const cities = [...new Set(items.map((item) => item.city).filter(Boolean))].sort((a, b) => a.localeCompare(b, "uk"));
   if (query) items = items.filter((item) => item.name.toLocaleLowerCase().includes(query));
+  if (city) items = items.filter((item) => item.city.toLocaleLowerCase() === city.toLocaleLowerCase());
+  if (visibility === "published") items = items.filter((item) => item.publicationStatus === "PUBLISHED");
+  if (visibility === "unpublished") items = items.filter((item) => item.publicationStatus !== "PUBLISHED");
+  if (visibility === "pending") items = items.filter((item) => item.publicationStatus === "IMPORT_PENDING_REVIEW");
+  if (visibility === "rejected") items = items.filter((item) => item.publicationStatus === "REJECTED");
+  if (visibility === "without_services") items = items.filter((item) =>
+    item.kind === "imported_unowned" ? item.importedServiceCount === 0 : item.activeServiceCount === 0
+  );
   const total = items.length;
   items = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   for (const item of items) {
@@ -112,6 +123,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     items: items.map((item) => ({ ...item, claimUrl: item.claimToken ? `${SITE_URL}/register?claim=${item.claimToken}` : null })),
     total,
+    cities,
     hasMore: (page + 1) * PAGE_SIZE < total,
   });
 }

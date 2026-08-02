@@ -38,8 +38,20 @@ const FILTERS = [
   { value: "imported_owned", label: "Імпортовані з власником" },
 ];
 
+const VISIBILITY_FILTERS = [
+  { value: "all", label: "Усі стани" },
+  { value: "published", label: "Опубліковані" },
+  { value: "unpublished", label: "Не опубліковані" },
+  { value: "pending", label: "Очікують модерації" },
+  { value: "rejected", label: "Відхилені" },
+  { value: "without_services", label: "Без активних послуг" },
+];
+
 export function SalonManagementPanel() {
   const [filter, setFilter] = useState("all");
+  const [visibility, setVisibility] = useState("all");
+  const [city, setCity] = useState("");
+  const [cities, setCities] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [items, setItems] = useState<Item[]>([]);
@@ -58,22 +70,24 @@ export function SalonManagementPanel() {
   const load = useCallback(async (nextPage: number, replace = false) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ filter, page: String(nextPage) });
+      const params = new URLSearchParams({ filter, visibility, page: String(nextPage) });
+      if (city) params.set("city", city);
       if (debouncedQuery) params.set("query", debouncedQuery);
       const response = await fetch(`/api/admin/salons?${params}`, { cache: "no-store" });
-      const data = await response.json() as { items: Item[]; total: number; hasMore: boolean; error?: string };
+      const data = await response.json() as { items: Item[]; total: number; cities: string[]; hasMore: boolean; error?: string };
       if (!response.ok) throw new Error(data.error);
       setItems((current) => replace ? data.items : [
         ...current,
         ...data.items.filter((item) => !current.some((old) => old.id === item.id && old.kind === item.kind)),
       ]);
       setTotal(data.total);
+      setCities(data.cities);
       setHasMore(data.hasMore);
       setPage(nextPage);
     } finally {
       setLoading(false);
     }
-  }, [debouncedQuery, filter]);
+  }, [city, debouncedQuery, filter, visibility]);
 
   useEffect(() => {
     setSelected(new Set());
@@ -186,6 +200,13 @@ export function SalonManagementPanel() {
         />
         <select value={filter} onChange={(event) => setFilter(event.target.value)} className="border-input bg-background h-9 rounded-md border px-3 text-sm">
           {FILTERS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+        <select value={visibility} onChange={(event) => setVisibility(event.target.value)} className="border-input bg-background h-9 rounded-md border px-3 text-sm" aria-label="Стан у публічному пошуку">
+          {VISIBILITY_FILTERS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+        <select value={city} onChange={(event) => setCity(event.target.value)} className="border-input bg-background h-9 max-w-48 rounded-md border px-3 text-sm" aria-label="Місто">
+          <option value="">Усі міста</option>
+          {cities.map((option) => <option key={option} value={option}>{option}</option>)}
         </select>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(items.map((item) => `${item.kind}:${item.id}`)))} />
