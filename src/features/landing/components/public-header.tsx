@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { ChevronDown, LogOut, Menu, Search, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/logo";
 import { VERTICALS } from "@/features/landing/verticals";
 import { CitySelector } from "./city-selector";
@@ -16,6 +17,7 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
   const [mobileOpen, setMobileOpen] = useState(false);
   const servicesRef = useRef<HTMLDivElement>(null);
   const [selectedCity, setSelectedCity] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const readCity = () => canonicalCityName(decodeURIComponent(document.cookie.split("; ").find((item) => item.startsWith("catalog_city="))?.split("=")[1] ?? ""), "UA");
@@ -26,6 +28,14 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
   }, []);
 
   const searchHref = (service = "all") => selectedCity ? selectedCity === "Київ" ? `/${slugify(selectedCity)}/all/${service}` : `/${slugify(selectedCity)}/${service}` : service === "all" ? "/search" : `/search?category=${service}`;
+
+  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+    const href = searchHref();
+    window.location.href = `${href}${href.includes("?") ? "&" : "?"}q=${encodeURIComponent(query)}`;
+  }
 
   useEffect(() => {
     if (!servicesOpen) return;
@@ -84,13 +94,10 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
               </div>
             )}
           </div>
-          <Link
-            href={searchHref()}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium"
-          >
-            <Search className="size-4" />
-            Пошук
-          </Link>
+          <form onSubmit={submitSearch} className="relative w-48 xl:w-56">
+            <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Салон або послуга" className="h-9 pr-9 text-sm" aria-label="Пошук" />
+            <button type="submit" aria-label="Знайти" className="text-muted-foreground hover:text-foreground absolute right-0 top-0 flex size-9 items-center justify-center"><Search className="size-4" /></button>
+          </form>
           <Link
             href="/register"
             className="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm font-medium"
@@ -121,6 +128,10 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
       {mobileOpen && (
         <div className="border-border bg-background border-t px-6 py-4 md:hidden">
           <div className="flex flex-col gap-1">
+            <form onSubmit={submitSearch} className="relative mb-3">
+              <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Салон, майстер або послуга" className="pr-10" aria-label="Пошук" />
+              <button type="submit" aria-label="Знайти" className="text-muted-foreground absolute right-0 top-0 flex size-9 items-center justify-center"><Search className="size-4" /></button>
+            </form>
             <p className="text-muted-foreground px-1 pt-1 text-xs font-semibold uppercase">Послуги</p>
             {VERTICALS.map((v) => (
               <Link
@@ -132,9 +143,6 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
                 {v.name}
               </Link>
             ))}
-            <Link href={searchHref()} onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium">
-              <Search className="size-4" />Пошук
-            </Link>
             <Link href="/register" onClick={() => setMobileOpen(false)} className="rounded-lg px-2 py-2 text-sm font-medium">
               Для бізнесу
             </Link>

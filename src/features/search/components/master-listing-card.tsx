@@ -22,6 +22,7 @@ export type MasterListingItem = {
   phone?: string;
   ratingSource?: "platform" | "google";
   avatarUrl?: string;
+  searchTerms?: string[];
 };
 
 const TYPE_LABELS: Record<MasterListingItem["organizationType"], string> = {

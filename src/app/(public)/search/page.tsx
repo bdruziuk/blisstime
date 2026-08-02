@@ -13,6 +13,7 @@ import { slugify } from "@/lib/slugify";
 import { canonicalKyivDistrict, sameKyivDistrict } from "@/features/business-import/services/kyiv-district-normalizer";
 
 type SearchPageParams = {
+  q?: string;
   category?: string;
   city?: string;
   district?: string;
@@ -32,6 +33,7 @@ export default async function SearchPage({
 }) {
   const params = await searchParams;
   const { category, district: districtParam, type, minPrice, maxPrice, minRating, sort } = params;
+  const q = params.q?.trim().slice(0, 100);
   const savedCity = (await cookies()).get("catalog_city")?.value;
   const city = params.city || savedCity || undefined;
   if (city && !pathBased) {
@@ -40,7 +42,7 @@ export default async function SearchPage({
       ? `/${citySlug}/${districtParam ? slugify(districtParam) : "all"}/${category || "all"}`
       : `/${citySlug}/${category || "all"}`;
     const query = new URLSearchParams();
-    for (const [key, value] of Object.entries({ type, minPrice, maxPrice, minRating, sort })) if (value && value !== "all" && value !== "default") query.set(key, value);
+    for (const [key, value] of Object.entries({ q, type, minPrice, maxPrice, minRating, sort })) if (value && value !== "all" && value !== "default") query.set(key, value);
     redirect(query.size ? `${path}?${query}` : path);
   }
 
@@ -147,6 +149,7 @@ export default async function SearchPage({
         reviewCount: stats?.reviewCount,
         ratingSource: "platform" as const,
         avatarUrl: s.avatar ? `/api/avatar/${encodeURIComponent(s.username)}?v=${s.avatar.updatedAt.getTime()}` : undefined,
+        searchTerms: s.services.map((service) => service.displayName),
       };
     });
 
@@ -179,7 +182,14 @@ export default async function SearchPage({
       profileHref: salon.websiteUri ?? salon.googleMapsUri ?? undefined,
       actionLabel: salon.websiteUri ? "Відкрити сайт" : "Google Maps",
       phone: salon.internationalPhone ?? salon.nationalPhone ?? undefined,
+      searchTerms: drafts.map((draft) => draft.displayName),
     });
+  }
+
+  if (q) {
+    const normalizedQuery = q.toLocaleLowerCase("uk");
+    results = results.filter((result) => [result.displayName, result.bio, result.address, ...result.categoryNames, ...(result.searchTerms ?? [])]
+      .some((value) => value?.toLocaleLowerCase("uk").includes(normalizedQuery)));
   }
 
   const minRatingNum = minRating ? Number(minRating) : undefined;
@@ -218,6 +228,7 @@ export default async function SearchPage({
             maxPrice,
             minRating,
             sort: sort ?? "default",
+            q,
           }}
         />
 

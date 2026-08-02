@@ -202,6 +202,7 @@ export function SearchFilters({
     maxPrice?: string;
     minRating?: string;
     sort: string;
+    q?: string;
   };
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -211,13 +212,17 @@ export function SearchFilters({
   function submitToCatalog(form: HTMLFormElement) {
     const data = new FormData(form);
     const city = String(data.get("city") ?? "");
-    if (!city) { router.push("/search"); return; }
+    if (!city) {
+      const q = String(data.get("q") ?? "");
+      router.push(q ? `/search?q=${encodeURIComponent(q)}` : "/search");
+      return;
+    }
     const district = String(data.get("district") ?? "");
     const service = String(data.get("category") ?? "") || "all";
     const citySlug = slugify(city);
     const path = city === "Київ" ? `/${citySlug}/${district ? slugify(district) : "all"}/${service}` : `/${citySlug}/${service}`;
     const query = new URLSearchParams();
-    for (const key of ["type", "minPrice", "maxPrice", "minRating", "sort"]) {
+    for (const key of ["q", "type", "minPrice", "maxPrice", "minRating", "sort"]) {
       const value = String(data.get(key) ?? "");
       if (value && value !== "all" && value !== "default") query.set(key, value);
     }
@@ -251,6 +256,7 @@ export function SearchFilters({
         className="border-border bg-card flex flex-col gap-5 rounded-xl border p-4"
       >
         <input type="hidden" name="sort" value={defaultValues.sort} />
+        {defaultValues.q && <input type="hidden" name="q" value={defaultValues.q} />}
         <div className="flex items-center justify-between">
           <p className="font-heading text-base font-bold">Фільтри</p>
           <Link
