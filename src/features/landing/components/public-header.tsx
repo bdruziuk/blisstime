@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { ChevronDown, LogOut, Menu, UserRound, X } from "lucide-react";
+import { ChevronDown, LogOut, Menu, Search, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { VERTICALS } from "@/features/landing/verticals";
@@ -86,9 +86,10 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
           </div>
           <Link
             href={searchHref()}
-            className="text-muted-foreground hover:text-foreground rounded-md px-3 py-2 text-sm font-medium"
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium"
           >
-            Знайти майстра
+            <Search className="size-4" />
+            Пошук
           </Link>
           <Link
             href="/register"
@@ -131,8 +132,8 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
                 {v.name}
               </Link>
             ))}
-            <Link href={searchHref()} onClick={() => setMobileOpen(false)} className="rounded-lg px-2 py-2 text-sm font-medium">
-              Знайти майстра
+            <Link href={searchHref()} onClick={() => setMobileOpen(false)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium">
+              <Search className="size-4" />Пошук
             </Link>
             <Link href="/register" onClick={() => setMobileOpen(false)} className="rounded-lg px-2 py-2 text-sm font-medium">
               Для бізнесу
