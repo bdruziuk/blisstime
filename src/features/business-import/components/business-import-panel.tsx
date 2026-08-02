@@ -85,6 +85,8 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [includeDetails, setIncludeDetails] = useState(true);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [selectedJob, setSelectedJob] = useState<(Job & { tasks: Task[] }) | null>(null);
   const [businesses, setBusinesses] = useState<ImportedBusiness[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,10 +95,28 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
   const [notice, setNotice] = useState<string | null>(null);
 
   const loadJobs = useCallback(async () => {
-    const data = await responseJson<{ jobs: Job[] }>(await fetch("/api/admin/business-import/jobs", { cache: "no-store" }));
-    setJobs(data.jobs);
+    const data = await responseJson<{ jobs: Job[]; total: number }>(await fetch("/api/admin/business-import/jobs?offset=0&limit=1", { cache: "no-store" }));
+    setJobs((current) => {
+      const latest = data.jobs[0];
+      if (!latest) return [];
+      return [latest, ...current.filter((job) => job.id !== latest.id)];
+    });
+    setTotalJobs(data.total);
     return data.jobs;
   }, []);
+
+  async function loadMoreJobs() {
+    setHistoryLoading(true);
+    try {
+      const data = await responseJson<{ jobs: Job[]; total: number }>(await fetch(`/api/admin/business-import/jobs?offset=${jobs.length}&limit=5`, { cache: "no-store" }));
+      setJobs((current) => [...current, ...data.jobs.filter((job) => !current.some((item) => item.id === job.id))]);
+      setTotalJobs(data.total);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Не вдалося завантажити історію");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
 
   const loadDetails = useCallback(async (jobId: string) => {
     const data = await responseJson<{ job: Job & { tasks: Task[] }; businesses: ImportedBusiness[] }>(
@@ -323,9 +343,10 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
 
       {activeJob && <JobProgress job={activeJob} onCancel={() => cancelJob(activeJob.id)} onOpen={() => loadDetails(activeJob.id)} />}
 
-      <section className="border-border bg-card overflow-hidden rounded-2xl border shadow-sm">
-        <div className="flex items-center justify-between p-5"><h2 className="font-heading text-xl font-semibold">Історія</h2><Button variant="outline" size="sm" onClick={() => loadJobs()}><RefreshCw />Оновити</Button></div>
-        <div className="overflow-x-auto border-t"><table className="w-full min-w-[960px] text-left text-sm"><thead className="bg-muted/50 text-muted-foreground text-xs"><tr>{["Дата", "Місто", "Категорії", "Статус", "Знайдено", "Створено", "Оновлено", "Помилки", "Автор", ""].map((heading) => <th key={heading} className="px-4 py-3 font-medium">{heading}</th>)}</tr></thead><tbody className="divide-border divide-y">{jobs.map((job) => <tr key={job.id} className="hover:bg-accent/20"><td className="px-4 py-3">{dateFormatter.format(new Date(job.createdAt))}</td><td className="px-4 py-3 font-medium">{job.city.name}<span className="text-muted-foreground block text-xs">{job.city.countryCode}</span></td><td className="px-4 py-3 text-xs">{job.categories.map((key) => categoryMap.get(key) ?? key).join(", ")}</td><td className="px-4 py-3">{statusLabel[job.status] ?? job.status}</td><td className="px-4 py-3">{job.foundCount}</td><td className="px-4 py-3">{job.createdCount}</td><td className="px-4 py-3">{job.updatedCount}</td><td className="px-4 py-3">{job.failedCount}</td><td className="px-4 py-3 text-xs">{job.createdBy?.email ?? "—"}</td><td className="px-4 py-3"><div className="flex"><Button variant="ghost" size="sm" onClick={() => loadDetails(job.id)}>Деталі <ChevronDown /></Button><Button variant="ghost" size="sm" disabled={Boolean(activeJob)} onClick={() => { setSelectedCity(job.city); setCityQuery(""); setCountryCode(job.city.countryCode); setSelectedCategories(job.categories); setIncludeDetails(job.includeDetails); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Повторити</Button></div></td></tr>)}</tbody></table>{jobs.length === 0 && <p className="text-muted-foreground p-10 text-center text-sm">Імпортів ще немає.</p>}</div>
+      <section className="border-border bg-card overflow-hidden rounded-xl border shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3"><div><h2 className="font-heading text-lg font-semibold">Історія</h2><p className="text-muted-foreground text-xs">Показано {jobs.length} із {totalJobs}</p></div><Button variant="ghost" size="sm" onClick={() => loadJobs()}><RefreshCw />Оновити</Button></div>
+        <div className="overflow-x-auto border-t"><table className="w-full min-w-[960px] text-left text-xs"><thead className="bg-muted/50 text-muted-foreground"><tr>{["Дата", "Місто", "Категорії", "Статус", "Знайдено", "Створено", "Оновлено", "Помилки", "Автор", ""].map((heading) => <th key={heading} className="px-3 py-2 font-medium">{heading}</th>)}</tr></thead><tbody className="divide-border divide-y">{jobs.map((job) => <tr key={job.id} className="hover:bg-accent/20"><td className="px-3 py-2">{dateFormatter.format(new Date(job.createdAt))}</td><td className="px-3 py-2 font-medium">{job.city.name}<span className="text-muted-foreground block">{job.city.countryCode}</span></td><td className="max-w-48 px-3 py-2">{job.categories.map((key) => categoryMap.get(key) ?? key).join(", ")}</td><td className="px-3 py-2">{statusLabel[job.status] ?? job.status}</td><td className="px-3 py-2">{job.foundCount}</td><td className="px-3 py-2">{job.createdCount}</td><td className="px-3 py-2">{job.updatedCount}</td><td className="px-3 py-2">{job.failedCount}</td><td className="px-3 py-2">{job.createdBy?.email ?? "—"}</td><td className="px-3 py-2"><div className="flex"><Button variant="ghost" size="xs" onClick={() => loadDetails(job.id)}>Деталі <ChevronDown /></Button><Button variant="ghost" size="xs" disabled={Boolean(activeJob)} onClick={() => { setSelectedCity(job.city); setCityQuery(""); setCountryCode(job.city.countryCode); setSelectedCategories(job.categories); setIncludeDetails(job.includeDetails); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Повторити</Button></div></td></tr>)}</tbody></table>{jobs.length === 0 && <p className="text-muted-foreground p-8 text-center text-sm">Імпортів ще немає.</p>}</div>
+        {jobs.length < totalJobs && <div className="flex justify-center border-t p-3"><Button variant="outline" size="sm" disabled={historyLoading} onClick={loadMoreJobs}>{historyLoading ? <Loader2 className="animate-spin" /> : <ChevronDown />}Подивитися історію · ще 5</Button></div>}
       </section>
 
       {selectedJob && <JobDetails job={selectedJob} businesses={businesses} categoryMap={categoryMap} onClose={() => setSelectedJob(null)} onModerateMany={moderateBusinesses} onRetryTask={retryTask} onEnrich={enrichBusiness} onModerateDraft={moderateDraft} />}
