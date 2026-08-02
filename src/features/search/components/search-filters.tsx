@@ -10,13 +10,6 @@ import { Input } from "@/components/ui/input";
 
 type Category = { slug: string; name: string };
 
-const SORT_OPTIONS = [
-  { value: "default", label: "За замовчуванням" },
-  { value: "price_asc", label: "Спочатку дешевші" },
-  { value: "price_desc", label: "Спочатку дорожчі" },
-  { value: "rating_desc", label: "Спочатку з вищим рейтингом" },
-];
-
 const TYPE_OPTIONS = [
   { value: "all", label: "Усі" },
   { value: "salon", label: "Тільки салони" },
@@ -257,6 +250,7 @@ export function SearchFilters({
         onSubmit={(event) => { event.preventDefault(); submitToCatalog(event.currentTarget); }}
         className="border-border bg-card flex flex-col gap-5 rounded-xl border p-4"
       >
+        <input type="hidden" name="sort" value={defaultValues.sort} />
         <div className="flex items-center justify-between">
           <p className="font-heading text-base font-bold">Фільтри</p>
           <Link
@@ -368,21 +362,6 @@ export function SearchFilters({
                 value={opt.value}
                 label={opt.label}
                 checked={selectedRating === opt.value}
-                onChange={submit}
-              />
-            ))}
-          </div>
-        </FilterGroup>
-
-        <FilterGroup title="Сортування">
-          <div className="-mx-1">
-            {SORT_OPTIONS.map((opt) => (
-              <RadioRow
-                key={opt.value}
-                name="sort"
-                value={opt.value}
-                label={opt.label}
-                checked={defaultValues.sort === opt.value}
                 onChange={submit}
               />
             ))}

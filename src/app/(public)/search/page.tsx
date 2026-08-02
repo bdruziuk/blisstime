@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { SearchFilters } from "@/features/search/components/search-filters";
 import type { MasterListingItem } from "@/features/search/components/master-listing-card";
 import { LazyListingGrid } from "@/features/search/components/lazy-listing-grid";
+import { SearchSort } from "@/features/search/components/search-sort";
 import { getRatingStatsForStaff } from "@/features/booking/rating";
 import { canonicalCityName, catalogCityName, sameCanonicalCity } from "@/features/business-import/services/city-normalizer";
 import { slugify } from "@/lib/slugify";
@@ -218,11 +219,7 @@ export default async function SearchPage({
         />
 
         <div className="flex-1">
-          <p className="text-muted-foreground mb-4 text-sm">
-            {results.length === 0
-              ? "Нічого не знайдено"
-              : `Знайдено майстрів: ${results.length}`}
-          </p>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3"><p className="text-muted-foreground text-sm">{results.length === 0 ? "Нічого не знайдено" : `Знайдено результатів: ${results.length}`}</p><SearchSort value={sort ?? "default"} /></div>
 
           {results.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
