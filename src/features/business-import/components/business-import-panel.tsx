@@ -95,6 +95,7 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [regionalCenterBackfill, setRegionalCenterBackfill] = useState<{ running: boolean; processed: number; remaining: number | null }>({ running: false, processed: 0, remaining: null });
 
   const loadJobs = useCallback(async () => {
     const data = await responseJson<{ jobs: Job[]; total: number }>(await fetch("/api/admin/business-import/jobs?offset=0&limit=1", { cache: "no-store" }));
@@ -187,6 +188,31 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
 
   const categoryMap = useMemo(() => new Map(categories.map((category) => [category.key, category.label])), [categories]);
   const activeJob = jobs.find((job) => ACTIVE.has(job.status));
+
+  async function backfillRegionalCenters() {
+    setError(null);
+    setNotice(null);
+    setRegionalCenterBackfill({ running: true, processed: 0, remaining: null });
+    let force = true;
+    let totalProcessed = 0;
+    try {
+      while (true) {
+        const result = await responseJson<{ processed: number; failed: number; remaining: number; done: boolean }>(
+          await fetch(`/api/admin/business-import/regional-centers/backfill${force ? "?force=true" : ""}`, { method: "POST" })
+        );
+        force = false;
+        totalProcessed += result.processed;
+        setRegionalCenterBackfill({ running: true, processed: totalProcessed, remaining: result.remaining });
+        if (result.done) break;
+        if (result.processed === 0) throw new Error(`Не вдалося обробити ${result.remaining} записів. Перевірте Google Places API.`);
+      }
+      setNotice(`Обласні центри перераховано. Оброблено записів: ${totalProcessed}.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Не вдалося перерахувати обласні центри");
+    } finally {
+      setRegionalCenterBackfill((current) => ({ ...current, running: false }));
+    }
+  }
 
   async function createJob() {
     if (!selectedCity || selectedCategories.length === 0) return;
@@ -335,7 +361,10 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
             </div>
             {selectedCity && <div className="border-primary/20 bg-primary/5 rounded-xl border p-3 text-sm"><strong>{selectedCity.name}</strong><p className="text-muted-foreground">{selectedCity.formattedName}</p><p className="text-muted-foreground mt-1 text-xs">Google Place ID: {selectedCity.externalId}</p></div>}
             <div>
-              <p className="text-sm font-medium">Обласні центри України</p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div><p className="text-sm font-medium">Обласні центри України</p>{regionalCenterBackfill.remaining !== null && <p className="text-muted-foreground text-xs">Оброблено: {regionalCenterBackfill.processed} · залишилось: {regionalCenterBackfill.remaining}</p>}</div>
+                <Button type="button" variant="outline" size="sm" disabled={regionalCenterBackfill.running} onClick={backfillRegionalCenters}>{regionalCenterBackfill.running ? <Loader2 className="animate-spin" /> : <RefreshCw />}Перерахувати</Button>
+              </div>
               <div className="mt-2 grid max-h-72 grid-cols-2 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-2">
                 {regionalCenters.map((center) => (
                   <button
