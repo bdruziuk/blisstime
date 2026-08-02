@@ -57,8 +57,8 @@ export default async function MasterPublicPage({
         </Link>
 
         <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:text-left">
-          <div className="bg-primary text-primary-foreground font-heading ring-background relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-3xl text-2xl font-bold shadow-lg ring-4">
-            {staff.avatar ? <Image src={`/api/avatar/${encodeURIComponent(staff.username)}?v=${staff.avatar.updatedAt.getTime()}`} alt={staff.displayName} fill sizes="80px" unoptimized className="object-cover" priority /> : initials}
+          <div className="bg-primary text-primary-foreground font-heading ring-background relative flex size-32 shrink-0 items-center justify-center overflow-hidden rounded-3xl text-4xl font-bold shadow-lg ring-4 sm:size-36">
+            {staff.avatar ? <Image src={`/api/avatar/${encodeURIComponent(staff.username)}?v=${staff.avatar.updatedAt.getTime()}`} alt={staff.displayName} fill sizes="(min-width: 640px) 144px, 128px" unoptimized className="object-cover" priority /> : initials}
           </div>
           <div className="flex flex-col items-center gap-2 sm:items-start">
             <h1 className="font-heading text-3xl font-bold sm:text-4xl">{staff.displayName}</h1>
