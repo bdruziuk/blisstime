@@ -9,6 +9,7 @@ import { calculateProgress } from "../services/progress";
 
 type Category = { key: string; label: string; providerTypes: string[]; searchQueries: string[] };
 type City = { externalId: string; name: string; formattedName: string };
+type RegionalCenter = { name: string; imported: boolean; recordCount: number; latestImportAt: string | null; city: (City & { countryCode: string }) | null };
 type Job = {
   id: string;
   status: string;
@@ -81,6 +82,7 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
   const [countryCode, setCountryCode] = useState("UA");
   const [cityQuery, setCityQuery] = useState("");
   const [cities, setCities] = useState<City[]>([]);
+  const [regionalCenters, setRegionalCenters] = useState<RegionalCenter[]>([]);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [includeDetails, setIncludeDetails] = useState(true);
@@ -128,6 +130,10 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
 
   useEffect(() => {
     loadJobs().catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Не вдалося завантажити імпорти"));
+    fetch("/api/admin/business-import/regional-centers", { cache: "no-store" })
+      .then((response) => responseJson<{ centers: RegionalCenter[] }>(response))
+      .then((data) => setRegionalCenters(data.centers))
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Не вдалося завантажити обласні центри"));
   }, [loadJobs]);
 
   useEffect(() => {
@@ -328,6 +334,35 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
               )}
             </div>
             {selectedCity && <div className="border-primary/20 bg-primary/5 rounded-xl border p-3 text-sm"><strong>{selectedCity.name}</strong><p className="text-muted-foreground">{selectedCity.formattedName}</p><p className="text-muted-foreground mt-1 text-xs">Google Place ID: {selectedCity.externalId}</p></div>}
+            <div>
+              <p className="text-sm font-medium">Обласні центри України</p>
+              <div className="mt-2 grid max-h-72 grid-cols-2 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-3 lg:grid-cols-2">
+                {regionalCenters.map((center) => (
+                  <button
+                    key={center.name}
+                    type="button"
+                    onClick={() => {
+                      if (center.city) {
+                        setSelectedCity(center.city);
+                        setCountryCode("UA");
+                        setCityQuery("");
+                        setCities([]);
+                      } else {
+                        setSelectedCity(null);
+                        setCountryCode("UA");
+                        setCityQuery(center.name);
+                      }
+                    }}
+                    className={`rounded-lg border px-2.5 py-2 text-left text-xs transition-colors ${center.imported ? "border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10" : "border-border hover:bg-accent"}`}
+                  >
+                    <span className="block font-semibold">{center.name}</span>
+                    <span className={center.imported ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}>
+                      {center.imported ? `імпортовано · ${center.recordCount}` : "ще не імпортовано · 0"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
             <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={includeDetails} onChange={(event) => setIncludeDetails(event.target.checked)} className="mt-1" /><span>Отримувати телефони, сайт, рейтинг і години роботи через Place Details</span></label>
           </div>
           <div>
