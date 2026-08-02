@@ -10,6 +10,7 @@ import type {
 import { IMPORT_CONFIG } from "../config/import-config";
 import { isValidBounds } from "../services/grid-builder";
 import { withRetry } from "../services/retry";
+import { nearestRegionalCenter, regionalCenterFromRegion } from "@/features/search/regional-centers";
 
 const API_BASE = "https://places.googleapis.com/v1";
 
@@ -168,6 +169,7 @@ export class GooglePlacesImportProvider implements BusinessImportProvider {
       throw new GooglePlacesError("Місто не знайдено або Google не повернув viewport", 422, false);
     }
     const country = place.addressComponents?.find((component) => component.types?.includes("country"));
+    const region = place.addressComponents?.find((component) => component.types?.includes("administrative_area_level_1"));
     const localizedCity = place.addressComponents?.find((component) =>
       component.types?.some((type) => ["locality", "postal_town", "administrative_area_level_3"].includes(type))
     )?.longText ?? place.displayName.text;
@@ -177,6 +179,7 @@ export class GooglePlacesImportProvider implements BusinessImportProvider {
       name: localizedCity,
       formattedName: place.formattedAddress ?? place.displayName.text,
       countryCode: country?.shortText?.toUpperCase() ?? "XX",
+      regionalCenter: regionalCenterFromRegion(region?.longText) ?? nearestRegionalCenter(place.location.latitude ?? 0, place.location.longitude ?? 0),
       centerLat: place.location.latitude ?? (bounds.south + bounds.north) / 2,
       centerLng: place.location.longitude ?? (bounds.west + bounds.east) / 2,
       bounds,

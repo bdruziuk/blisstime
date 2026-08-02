@@ -3,6 +3,7 @@ import { slugify } from "@/lib/slugify";
 import { getRatingStatsForStaff } from "@/features/booking/rating";
 import type { MasterListingItem } from "@/features/search/components/master-listing-card";
 import { catalogCityName } from "@/features/business-import/services/city-normalizer";
+import { UKRAINE_REGIONAL_CENTERS } from "@/features/search/regional-centers";
 
 export type CatalogCombo = {
   citySlug: string;
@@ -55,6 +56,8 @@ export async function getCatalogCombos(): Promise<CatalogCombo[]> {
 }
 
 export async function resolveCityFromSlug(citySlug: string): Promise<string | null> {
+  const regionalCenter = UKRAINE_REGIONAL_CENTERS.find((center) => slugify(center.city) === citySlug);
+  if (regionalCenter) return regionalCenter.city;
   const [rows, imported] = await Promise.all([
     prisma.location.findMany({ where: { staff: { some: { onboardedAt: { not: null }, isPublished: true } } }, select: { city: true }, distinct: ["city"] }),
     prisma.importedBusiness.findMany({ where: { publicationStatus: "PUBLISHED" }, select: { city: true, countryCode: true, importResults: { take: 1, orderBy: { createdAt: "desc" }, select: { job: { select: { city: { select: { name: true, countryCode: true } } } } } } } }),

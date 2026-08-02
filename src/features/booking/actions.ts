@@ -51,7 +51,7 @@ export async function registerStaff(
   }
   const { name, email, password } = parsed.data;
   const claimToken = String(formData.get("claimToken") || "").trim();
-  const claimedBusiness = claimToken ? await prisma.importedBusiness.findUnique({ where: { ownerClaimToken: claimToken }, select: { id: true, name: true, formattedAddress: true, city: true, district: true, lat: true, lng: true, claimedByStaffId: true } }) : null;
+  const claimedBusiness = claimToken ? await prisma.importedBusiness.findUnique({ where: { ownerClaimToken: claimToken }, select: { id: true, name: true, formattedAddress: true, city: true, district: true, regionalCenter: true, lat: true, lng: true, claimedByStaffId: true } }) : null;
   if (claimToken && (!claimedBusiness || claimedBusiness.claimedByStaffId)) return { error: "Посилання власника недійсне або вже використане" };
 
   const existing = await prisma.user.findUnique({ where: { email } });
@@ -75,6 +75,7 @@ export async function registerStaff(
         address: claimedBusiness?.formattedAddress ?? "",
         city: claimedBusiness?.city ?? "",
         district: claimedBusiness?.district ?? null,
+        regionalCenter: claimedBusiness?.regionalCenter ?? null,
         lat: claimedBusiness?.lat ?? null,
         lng: claimedBusiness?.lng ?? null,
         workingHours: {},

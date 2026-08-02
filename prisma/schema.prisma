@@ -88,6 +88,7 @@ model Location {
   address        String
   city           String
   district       String?
+  regionalCenter String?
   lat            Float?
   lng            Float?
   // Working hours per weekday, e.g. { "mon": ["09:00","18:00"], ... }
@@ -399,6 +400,7 @@ model BusinessImportCity {
   name          String
   formattedName String
   countryCode   String
+  regionalCenter String?
   centerLat     Float
   centerLng     Float
   south         Float
@@ -492,6 +494,7 @@ model ImportedBusiness {
   countryCode           String
   city                  String
   district              String?
+  regionalCenter        String?
   formattedAddress      String
   lat                   Float
   lng                   Float
@@ -523,6 +526,7 @@ model ImportedBusiness {
   @@unique([provider, externalId])
   @@unique([slug])
   @@index([publicationStatus, city])
+  @@index([publicationStatus, regionalCenter])
   @@index([normalizedPhone])
   @@index([normalizedDomain])
   @@index([normalizedName, normalizedAddress])

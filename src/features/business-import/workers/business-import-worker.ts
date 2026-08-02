@@ -206,7 +206,7 @@ async function processClaimedTask(task: ClaimedTask, provider: BusinessImportPro
         );
         await prisma.importedBusiness.update({
           where: { id: freshExisting.id },
-          data: { categories, city: canonicalCityName(job.city.name, job.city.countryCode) },
+          data: { categories, city: canonicalCityName(job.city.name, job.city.countryCode), regionalCenter: job.city.regionalCenter },
         });
         await recordJobResult(job.id, freshExisting.id, task.category, "duplicate");
         counts.duplicate += 1;
@@ -220,6 +220,7 @@ async function processClaimedTask(task: ClaimedTask, provider: BusinessImportPro
         category: task.category,
         fallbackCity: job.city.name,
         fallbackCountryCode: job.city.countryCode,
+        fallbackRegionalCenter: job.city.regionalCenter,
       });
       counts[result.outcome] += 1;
       await recordJobResult(job.id, result.businessId, task.category, result.outcome);

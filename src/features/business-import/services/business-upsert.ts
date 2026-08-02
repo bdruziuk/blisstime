@@ -23,11 +23,13 @@ export async function upsertImportedBusiness({
   category,
   fallbackCity,
   fallbackCountryCode,
+  fallbackRegionalCenter,
 }: {
   details: ImportedBusinessDetails;
   category: string;
   fallbackCity: string;
   fallbackCountryCode: string;
+  fallbackRegionalCenter: string | null;
 }): Promise<UpsertResult> {
   const existing = await prisma.importedBusiness.findUnique({
     where: { provider_externalId: { provider: "GOOGLE", externalId: details.externalId } },
@@ -54,6 +56,7 @@ export async function upsertImportedBusiness({
     countryCode,
     city,
     district,
+    regionalCenter: fallbackRegionalCenter,
     formattedAddress: details.formattedAddress,
     lat: details.lat,
     lng: details.lng,

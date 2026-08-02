@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { slugify } from "@/lib/slugify";
 import { canonicalCityName } from "@/features/business-import/services/city-normalizer";
 
-type City = { city: string; lat: number; lng: number };
+type City = { city: string; lat: number; lng: number; regionalCenter: string; isRegionalCenter: boolean };
 const COOKIE = "catalog_city";
 
 function distanceSquared(lat: number, lng: number, city: City) {
@@ -77,5 +77,13 @@ export function CitySelector() {
     }, () => setLocating(false), { enableHighAccuracy: false, timeout: 10_000, maximumAge: 3_600_000 });
   }
 
-  return <div ref={ref} className="relative"><button type="button" onClick={() => setOpen((value) => !value)} className="text-muted-foreground hover:text-foreground flex max-w-44 items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium"><MapPin className="size-4 shrink-0" /><span className="truncate">{selected || "Оберіть місто"}</span><ChevronDown className="size-3.5 shrink-0" /></button>{open && <div className="border-border bg-popover absolute left-0 z-50 mt-1 w-64 rounded-xl border p-2 shadow-lg"><button type="button" onClick={locate} disabled={locating || cities.length === 0} className="hover:bg-accent flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium"><LocateFixed className={`size-4 ${locating ? "animate-pulse" : ""}`} />{locating ? "Визначаємо місто…" : "Визначити автоматично"}</button><div className="border-border my-1 border-t" /><div className="max-h-64 overflow-auto">{cities.map((item) => <button key={item.city} type="button" onClick={() => choose(item.city)} className="hover:bg-accent flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-sm"><span>{item.city}</span>{selected === item.city && <Check className="text-primary size-4" />}</button>)}</div></div>}</div>;
+  const groups = [...new Set(cities.map((city) => city.regionalCenter))]
+    .sort((a, b) => a.localeCompare(b, "uk"))
+    .map((regionalCenter) => ({
+      regionalCenter,
+      center: cities.find((city) => city.city === regionalCenter),
+      children: cities.filter((city) => city.regionalCenter === regionalCenter && city.city !== regionalCenter).sort((a, b) => a.city.localeCompare(b.city, "uk")),
+    }));
+
+  return <div ref={ref} className="relative"><button type="button" onClick={() => setOpen((value) => !value)} className="text-muted-foreground hover:text-foreground flex max-w-44 items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium"><MapPin className="size-4 shrink-0" /><span className="truncate">{selected || "Оберіть місто"}</span><ChevronDown className="size-3.5 shrink-0" /></button>{open && <div className="border-border bg-popover fixed left-1/2 top-20 z-50 w-[calc(100vw-2rem)] max-w-5xl -translate-x-1/2 rounded-xl border p-3 shadow-xl"><div className="flex items-center justify-between gap-3"><div><p className="font-semibold">Оберіть місто</p><p className="text-muted-foreground text-xs">Обласні центри та міста області</p></div><button type="button" onClick={locate} disabled={locating || cities.length === 0} className="hover:bg-accent flex items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-medium"><LocateFixed className={`size-4 ${locating ? "animate-pulse" : ""}`} />{locating ? "Визначаємо…" : "Моє місто"}</button></div><div className="border-border mt-2 max-h-[min(65vh,34rem)] overflow-y-auto border-t pt-3"><div className="grid gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-4">{groups.map((group) => <section key={group.regionalCenter} className="min-w-0"><button type="button" onClick={() => choose(group.regionalCenter)} className="hover:text-primary flex w-full items-center justify-between gap-2 text-left text-sm font-bold"><span>{group.regionalCenter}</span>{selected === group.regionalCenter && <Check className="text-primary size-4 shrink-0" />}</button>{group.children.length > 0 && <div className="border-border mt-1.5 space-y-0.5 border-l pl-2">{group.children.map((item) => <button key={item.city} type="button" onClick={() => choose(item.city)} className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center justify-between rounded px-2 py-1 text-left text-xs"><span className="truncate">{item.city}</span>{selected === item.city && <Check className="text-primary size-3.5 shrink-0" />}</button>)}</div>}</section>)}</div></div></div>}</div>;
 }

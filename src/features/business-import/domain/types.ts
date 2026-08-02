@@ -10,6 +10,7 @@ export type ImportCityCandidate = {
 export type ResolvedImportCity = ImportCityCandidate & {
   provider: "GOOGLE";
   countryCode: string;
+  regionalCenter: string | null;
   centerLat: number;
   centerLng: number;
   bounds: GeoBounds;
