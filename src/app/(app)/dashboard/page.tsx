@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Globe, Scissors, MapPin, ArrowUpRight, CalendarDays, Clock, Pencil } from "lucide-react";
+import { Globe, Scissors, MapPin, ArrowUpRight, CalendarDays, Clock, Pencil, Receipt, Users, Wallet } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BUSINESS_TIMEZONE, getDayBoundsUTC } from "@/features/booking/slots";
 import type { Prisma } from "@/generated/prisma/client";
+import { getClientsForStaff } from "@/features/crm/queries";
+import { getIncomeSummary } from "@/features/income/queries";
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: "Очікує підтвердження",
@@ -33,7 +35,7 @@ export default async function DashboardPage() {
     slotStart: { gte: start, lt: end },
     status: { notIn: ["DECLINED", "CANCELLED", "EXPIRED"] },
   };
-  const [todayBookings, todayBookingsCount] = await Promise.all([
+  const [todayBookings, todayBookingsCount, clients, income] = await Promise.all([
     prisma.booking.findMany({
       where: bookingWhere,
       orderBy: { slotStart: "asc" },
@@ -41,6 +43,8 @@ export default async function DashboardPage() {
       include: { client: true, service: true, services: { include: { service: true } } },
     }),
     prisma.booking.count({ where: bookingWhere }),
+    getClientsForStaff(staff.id),
+    getIncomeSummary(staff.id),
   ]);
 
   return (
@@ -95,6 +99,31 @@ export default async function DashboardPage() {
             )}
             <Button render={<Link href="/dashboard/services" />} nativeButton={false} variant="outline" size="sm" className="mt-4 w-full">
               <Pencil />Редагувати послуги
+            </Button>
+          </CardContent>
+        </Card>
+        <Card className="card-hover">
+          <CardContent className="flex h-full flex-col p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-muted-foreground flex items-center gap-1.5 text-sm"><Users className="size-4" />Клієнти</p>
+              <span className="text-2xl font-bold">{clients.length}</span>
+            </div>
+            <p className="text-muted-foreground mt-3 text-sm">Унікальні клієнти, які хоча б раз записувалися до вас.</p>
+            <Button render={<Link href="/dashboard/clients" />} nativeButton={false} variant="outline" size="sm" className="mt-4 w-full">
+              Переглянути клієнтів <ArrowUpRight />
+            </Button>
+          </CardContent>
+        </Card>
+        <Card className="card-hover">
+          <CardContent className="flex h-full flex-col p-5">
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm"><Wallet className="size-4" />Доходи цього місяця</p>
+            <p className="mt-1.5 text-2xl font-bold">{Math.round(income.thisMonthCents / 100).toLocaleString("uk-UA")} грн</p>
+            <div className="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
+              <p className="flex items-center gap-1"><Users className="size-3.5" />Візитів: {income.thisMonthVisits}</p>
+              <p className="flex items-center gap-1"><Receipt className="size-3.5" />Середній чек: {Math.round(income.avgCheckCents / 100).toLocaleString("uk-UA")} грн</p>
+            </div>
+            <Button render={<Link href="/dashboard/income" />} nativeButton={false} variant="outline" size="sm" className="mt-4 w-full">
+              Детальніше про доходи <ArrowUpRight />
             </Button>
           </CardContent>
         </Card>
