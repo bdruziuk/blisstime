@@ -10,7 +10,7 @@ export default async function OnboardingHoursPage() {
 
   const staff = await prisma.staff.findUnique({
     where: { userId: session.user.id },
-    include: { services: true },
+    include: { services: true, location: true },
   });
   if (!staff) redirect("/register");
   if (staff.services.length === 0) redirect("/onboarding/services");
@@ -22,7 +22,7 @@ export default async function OnboardingHoursPage() {
           <CardTitle>Крок 3/3 — Робочі години</CardTitle>
         </CardHeader>
         <CardContent>
-          <HoursForm />
+          <HoursForm defaultCity={staff.location.city} defaultDistrict={staff.location.district ?? ""} defaultAddress={staff.location.address} />
         </CardContent>
       </Card>
     </main>

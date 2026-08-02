@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DAYS, DAY_LABELS } from "@/features/booking/schemas";
 
-export function HoursForm() {
+export function HoursForm({ defaultCity = "", defaultDistrict = "", defaultAddress = "" }: { defaultCity?: string; defaultDistrict?: string; defaultAddress?: string }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     saveLocationAndFinish,
     undefined
@@ -17,15 +17,15 @@ export function HoursForm() {
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="city">Місто</Label>
-        <Input id="city" name="city" required />
+        <Input id="city" name="city" defaultValue={defaultCity} required />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="district">Район (необов&apos;язково)</Label>
-        <Input id="district" name="district" placeholder="Напр. Печерський" />
+        <Input id="district" name="district" defaultValue={defaultDistrict} placeholder="Напр. Печерський" />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="address">Адреса</Label>
-        <Input id="address" name="address" required />
+        <Input id="address" name="address" defaultValue={defaultAddress} required />
       </div>
 
       <div className="flex flex-col gap-2">
