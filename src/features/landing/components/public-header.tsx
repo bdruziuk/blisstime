@@ -63,10 +63,6 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
         <Link href="/">
           <Logo className="text-lg" />
         </Link>
-        <div className="hidden md:block">
-          <Suspense fallback={<span className="text-muted-foreground text-sm">Місто…</span>}><CitySelector /></Suspense>
-        </div>
-
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
           <div ref={servicesRef} className="relative">
@@ -94,9 +90,12 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
               </div>
             )}
           </div>
-          <form onSubmit={submitSearch} className="relative w-48 xl:w-56">
-            <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Салон або послуга" className="h-9 pr-9 text-sm" aria-label="Пошук" />
-            <button type="submit" aria-label="Знайти" className="text-muted-foreground hover:text-foreground absolute right-0 top-0 flex size-9 items-center justify-center"><Search className="size-4" /></button>
+          <form onSubmit={submitSearch} className="border-input bg-background flex h-10 w-[22rem] items-center overflow-visible rounded-md border shadow-xs xl:w-[27rem]">
+            <div className="shrink-0"><Suspense fallback={<span className="text-muted-foreground px-2 text-xs">Місто…</span>}><CitySelector /></Suspense></div>
+            <div className="relative min-w-0 flex-1 border-l">
+              <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Салон або послуга" className="h-9 border-0 pr-9 text-sm shadow-none focus-visible:ring-0" aria-label="Пошук" />
+              <button type="submit" aria-label="Знайти" className="text-muted-foreground hover:text-foreground absolute right-0 top-0 flex size-9 items-center justify-center"><Search className="size-4" /></button>
+            </div>
           </form>
           <Link
             href="/register"
@@ -120,17 +119,16 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
 
       </div>
 
-      <div className="border-border mx-auto flex max-w-6xl items-center border-t px-6 py-2 md:hidden">
-        <Suspense fallback={<span className="text-muted-foreground text-sm">Місто…</span>}><CitySelector /></Suspense>
-      </div>
-
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="border-border bg-background border-t px-6 py-4 md:hidden">
           <div className="flex flex-col gap-1">
-            <form onSubmit={submitSearch} className="relative mb-3">
-              <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Салон, майстер або послуга" className="pr-10" aria-label="Пошук" />
-              <button type="submit" aria-label="Знайти" className="text-muted-foreground absolute right-0 top-0 flex size-9 items-center justify-center"><Search className="size-4" /></button>
+            <form onSubmit={submitSearch} className="border-input mb-3 flex min-w-0 flex-col overflow-visible rounded-md border sm:flex-row sm:items-center">
+              <div className="shrink-0 border-b sm:border-b-0 sm:border-r"><Suspense fallback={<span className="text-muted-foreground px-2 text-xs">Місто…</span>}><CitySelector /></Suspense></div>
+              <div className="relative min-w-0 flex-1">
+                <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Салон, майстер або послуга" className="border-0 pr-10 shadow-none focus-visible:ring-0" aria-label="Пошук" />
+                <button type="submit" aria-label="Знайти" className="text-muted-foreground absolute right-0 top-0 flex size-9 items-center justify-center"><Search className="size-4" /></button>
+              </div>
             </form>
             <p className="text-muted-foreground px-1 pt-1 text-xs font-semibold uppercase">Послуги</p>
             {VERTICALS.map((v) => (

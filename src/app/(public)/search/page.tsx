@@ -7,6 +7,8 @@ import { SearchFilters } from "@/features/search/components/search-filters";
 import type { MasterListingItem } from "@/features/search/components/master-listing-card";
 import { LazyListingGrid } from "@/features/search/components/lazy-listing-grid";
 import { SearchSort } from "@/features/search/components/search-sort";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { getRatingStatsForStaff } from "@/features/booking/rating";
 import { canonicalCityName, catalogCityName, sameCanonicalCity } from "@/features/business-import/services/city-normalizer";
 import { slugify } from "@/lib/slugify";
@@ -188,7 +190,17 @@ export default async function SearchPage({
 
   if (q) {
     const normalizedQuery = q.toLocaleLowerCase("uk");
-    results = results.filter((result) => [result.displayName, result.bio, result.address, ...result.categoryNames, ...(result.searchTerms ?? [])]
+    results = results.filter((result) => [
+      result.displayName,
+      result.username,
+      result.bio,
+      result.city,
+      result.address,
+      result.phone,
+      result.organizationType,
+      ...result.categoryNames,
+      ...(result.searchTerms ?? []),
+    ]
       .some((value) => value?.toLocaleLowerCase("uk").includes(normalizedQuery)));
   }
 
@@ -213,6 +225,19 @@ export default async function SearchPage({
           Оберіть послугу, місто й ціну — покажемо майстрів, які підходять.
         </p>
       </div>
+
+      <form method="get" className="flex w-full gap-2">
+        {type && type !== "all" && <input type="hidden" name="type" value={type} />}
+        {minPrice && <input type="hidden" name="minPrice" value={minPrice} />}
+        {maxPrice && <input type="hidden" name="maxPrice" value={maxPrice} />}
+        {minRating && <input type="hidden" name="minRating" value={minRating} />}
+        {sort && sort !== "default" && <input type="hidden" name="sort" value={sort} />}
+        <div className="relative min-w-0 flex-1">
+          <SearchIcon className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2" />
+          <Input name="q" defaultValue={q} placeholder="Назва салону, майстер, послуга або адреса" className="pl-9" aria-label="Пошуковий запит" />
+        </div>
+        <Button type="submit"><SearchIcon />Знайти</Button>
+      </form>
 
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         <SearchFilters
