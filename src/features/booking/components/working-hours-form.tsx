@@ -16,15 +16,16 @@ export function WorkingHoursForm({ defaultHours }: { defaultHours: Hours }) {
         {DAYS.map((day) => {
           const value = defaultHours[day];
           return (
-            <div key={day} className="grid grid-cols-[1fr_auto] items-center gap-2 sm:grid-cols-[8rem_7rem_auto_7rem]">
-              <label className="flex items-center gap-2 text-sm font-medium">
+            <div key={day} className="min-w-0 space-y-2 rounded-lg border p-2.5">
+              <label className="flex min-w-0 items-center gap-2 text-sm font-medium">
                 <input type="checkbox" name={`${day}_open`} defaultChecked={value?.open ?? day !== "sun"} />
                 {DAY_LABELS[day]}
               </label>
-              <span className="text-muted-foreground text-xs sm:hidden">робочий день</span>
-              <Input type="time" name={`${day}_from`} defaultValue={value?.from ?? "09:00"} className="w-full" aria-label={`${DAY_LABELS[day]}: початок`} />
-              <span className="text-muted-foreground hidden text-center sm:block">—</span>
-              <Input type="time" name={`${day}_to`} defaultValue={value?.to ?? "18:00"} className="w-full" aria-label={`${DAY_LABELS[day]}: завершення`} />
+              <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                <Input type="time" name={`${day}_from`} defaultValue={value?.from ?? "09:00"} className="min-w-0 w-full px-2" aria-label={`${DAY_LABELS[day]}: початок`} />
+                <span className="text-muted-foreground text-center">—</span>
+                <Input type="time" name={`${day}_to`} defaultValue={value?.to ?? "18:00"} className="min-w-0 w-full px-2" aria-label={`${DAY_LABELS[day]}: завершення`} />
+              </div>
             </div>
           );
         })}
