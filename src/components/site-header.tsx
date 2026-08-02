@@ -27,28 +27,32 @@ export async function SiteHeader() {
 
   return (
     <header className="border-border bg-card/70 sticky top-0 z-10 border-b backdrop-blur-md">
-      <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-3 sm:px-6">
         <Link href="/dashboard">
           <Logo className="text-lg" />
         </Link>
-        <nav className="flex items-center gap-1 text-sm">
+        <nav className="flex items-center gap-0.5 text-sm">
           {isSuperAdminEmail(session?.user?.email) && (
             <Link
               href="/admin"
-              className="text-primary hover:bg-primary/10 flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium"
+              aria-label="Адмін"
+              title="Адмін"
+              className="text-primary hover:bg-primary/10 flex items-center gap-1.5 rounded-md p-2 font-medium xl:px-3"
             >
               <ShieldCheck className="size-4" />
-              Адмін
+              <span className="hidden xl:inline">Адмін</span>
             </Link>
           )}
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-muted-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium"
+              aria-label={link.label}
+              title={link.label}
+              className="text-muted-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-1.5 rounded-md p-2 font-medium xl:px-3"
             >
               <link.icon className="size-4" />
-              {link.label}
+              <span className="hidden xl:inline">{link.label}</span>
             </Link>
           ))}
           {session?.user && (
@@ -60,10 +64,12 @@ export async function SiteHeader() {
             >
               <button
                 type="submit"
-                className="text-muted-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium"
+                aria-label="Вийти"
+                title="Вийти"
+                className="text-muted-foreground hover:bg-accent hover:text-accent-foreground flex items-center gap-1.5 rounded-md p-2 font-medium xl:px-3"
               >
                 <LogOut className="size-4" />
-                Вийти
+                <span className="hidden xl:inline">Вийти</span>
               </button>
             </form>
           )}
