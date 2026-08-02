@@ -72,7 +72,7 @@ export default async function SearchPage({
   ]);
   const importedLocationRows = await prisma.importedBusiness.findMany({
     where: { publicationStatus: "PUBLISHED" },
-    select: { city: true, district: true, countryCode: true, importResults: { take: 1, orderBy: { createdAt: "desc" }, select: { job: { select: { city: { select: { name: true, countryCode: true } } } } } } },
+    select: { id: true, city: true, district: true, countryCode: true, importResults: { take: 1, orderBy: { createdAt: "desc" }, select: { job: { select: { city: { select: { name: true, countryCode: true } } } } } } },
   });
   const importedCatalogCity = (row: (typeof importedLocationRows)[number]) => catalogCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode) ?? "";
   const cities = [...new Set([...cityRows.map((r) => catalogCityName(r.city, "UA")), ...importedLocationRows.map(importedCatalogCity)].filter((value): value is string => Boolean(value)))].sort((a, b) => a.localeCompare(b, "uk"));
@@ -105,6 +105,29 @@ export default async function SearchPage({
   const locationFilter: Prisma.LocationWhereInput = {};
   if (type === "salon") locationFilter.organization = { type: "SALON" };
   if (type === "solo") locationFilter.organization = { type: "SOLO" };
+  if (city) {
+    const cityVariants = cityRows.filter((row) => sameCanonicalCity(row.city, city, "UA")).map((row) => row.city);
+    locationFilter.city = { in: cityVariants.length ? cityVariants : [city], mode: "insensitive" };
+  }
+  if (district) {
+    const districtVariants = districtRows
+      .filter((row) => sameKyivDistrict(row.district, district))
+      .map((row) => row.district)
+      .filter((value): value is string => Boolean(value));
+    locationFilter.district = { in: districtVariants.length ? districtVariants : [district], mode: "insensitive" };
+  }
+
+  const staffTextFilter: Prisma.StaffWhereInput | undefined = q ? {
+    OR: [
+      { displayName: { contains: q, mode: "insensitive" } },
+      { username: { contains: q, mode: "insensitive" } },
+      { bio: { contains: q, mode: "insensitive" } },
+      { location: { address: { contains: q, mode: "insensitive" } } },
+      { location: { organization: { name: { contains: q, mode: "insensitive" } } } },
+      { services: { some: { isActive: true, displayName: { contains: q, mode: "insensitive" } } } },
+      { services: { some: { isActive: true, category: { name: { contains: q, mode: "insensitive" } } } } },
+    ],
+  } : undefined;
 
   let staffRows = await prisma.staff.findMany({
     where: {
@@ -112,6 +135,7 @@ export default async function SearchPage({
       isPublished: true,
       ...(Object.keys(locationFilter).length ? { location: locationFilter } : {}),
       services: { some: serviceFilter },
+      ...(staffTextFilter ?? {}),
     },
     include: {
       location: { include: { organization: true } },
@@ -122,9 +146,31 @@ export default async function SearchPage({
   if (city) staffRows = staffRows.filter((staff) => sameCanonicalCity(staff.location.city, city, "UA"));
   if (district) staffRows = staffRows.filter((staff) => sameKyivDistrict(staff.location.district, district));
 
-  const importedRows = type === "solo" ? [] : await prisma.importedBusiness.findMany({
+  const matchingImportedIds = (city || district)
+    ? importedLocationRows.filter((row) => {
+        const rowCity = importedCatalogCity(row);
+        return (!city || sameCanonicalCity(rowCity, city, row.countryCode)) && (!district || sameKyivDistrict(row.district, district));
+      }).map((row) => row.id)
+    : null;
+  const importedServiceFilter: Prisma.ImportedBusinessServiceDraftWhereInput = {
+    status: "APPROVED",
+    ...(category ? { OR: [{ categorySlug: category }, { categorySlug: { startsWith: `${category}.` } }] } : {}),
+    ...(minPriceCents !== undefined ? { priceMinor: { gte: minPriceCents } } : {}),
+    ...(maxPriceCents !== undefined ? { priceMinor: { lte: maxPriceCents } } : {}),
+  };
+  const importedRows = type === "solo" || matchingImportedIds?.length === 0 ? [] : await prisma.importedBusiness.findMany({
     where: {
       publicationStatus: "PUBLISHED",
+      ...(matchingImportedIds ? { id: { in: matchingImportedIds } } : {}),
+      ...((category || minPriceCents !== undefined || maxPriceCents !== undefined) ? { serviceDrafts: { some: importedServiceFilter } } : {}),
+      ...(q ? { OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { formattedAddress: { contains: q, mode: "insensitive" } },
+        { nationalPhone: { contains: q } },
+        { internationalPhone: { contains: q } },
+        { websiteUri: { contains: q, mode: "insensitive" } },
+        { serviceDrafts: { some: { status: "APPROVED", displayName: { contains: q, mode: "insensitive" } } } },
+      ] } : {}),
     },
     include: { serviceDrafts: { where: { status: "APPROVED" } }, importResults: { take: 1, orderBy: { createdAt: "desc" }, include: { job: { include: { city: true } } } } },
   });

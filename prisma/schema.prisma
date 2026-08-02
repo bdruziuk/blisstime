@@ -98,6 +98,8 @@ model Location {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([city, district])
 }
 
 model Staff {
@@ -133,6 +135,9 @@ model Staff {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([isPublished, onboardedAt])
+  @@index([locationId])
 }
 
 model StaffAvatar {
@@ -182,6 +187,9 @@ model StaffService {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([staffId, isActive, categoryId])
+  @@index([categoryId, isActive, priceCents])
 }
 
 model Client {
@@ -539,6 +547,7 @@ model ImportedBusinessServiceDraft {
 
   @@unique([businessId, normalizedName, priceMinor, currencyCode])
   @@index([businessId, status])
+  @@index([status, categorySlug, priceMinor])
 }
 
 model BusinessImportResult {
