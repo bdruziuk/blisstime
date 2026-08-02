@@ -15,7 +15,7 @@ export type CatalogCombo = {
 /** All (city, top-level category) pairs that currently have at least one onboarded master with an active service — the universe of real, crawlable catalog pages. Never fabricated. */
 export async function getCatalogCombos(): Promise<CatalogCombo[]> {
   const staffRows = await prisma.staff.findMany({
-    where: { onboardedAt: { not: null } },
+    where: { onboardedAt: { not: null }, isPublished: true },
     select: {
       location: { select: { city: true } },
       services: {
@@ -56,7 +56,7 @@ export async function getCatalogCombos(): Promise<CatalogCombo[]> {
 
 export async function resolveCityFromSlug(citySlug: string): Promise<string | null> {
   const [rows, imported] = await Promise.all([
-    prisma.location.findMany({ where: { staff: { some: { onboardedAt: { not: null } } } }, select: { city: true }, distinct: ["city"] }),
+    prisma.location.findMany({ where: { staff: { some: { onboardedAt: { not: null }, isPublished: true } } }, select: { city: true }, distinct: ["city"] }),
     prisma.importedBusiness.findMany({ where: { publicationStatus: "PUBLISHED" }, select: { city: true, countryCode: true, importResults: { take: 1, orderBy: { createdAt: "desc" }, select: { job: { select: { city: { select: { name: true, countryCode: true } } } } } } } }),
   ]);
   const cities = [...rows.map((row) => catalogCityName(row.city, "UA")), ...imported.map((row) => catalogCityName(row.importResults[0]?.job.city.name ?? row.city, row.importResults[0]?.job.city.countryCode ?? row.countryCode))].filter((city): city is string => Boolean(city));
@@ -88,6 +88,7 @@ export async function getCatalogListings(
   const staffRows = await prisma.staff.findMany({
     where: {
       onboardedAt: { not: null },
+      isPublished: true,
       location: { city: { equals: city, mode: "insensitive" } },
       services: { some: serviceFilter },
     },

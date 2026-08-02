@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Copy, Loader2, Trash2 } from "lucide-react";
+import { Check, Copy, EyeOff, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -14,6 +14,7 @@ type Item = {
   city: string;
   owner: string | null;
   claimUrl: string | null;
+  publicationStatus: string;
 };
 
 const FILTERS = [
@@ -112,6 +113,28 @@ export function SalonManagementPanel() {
     }
   }
 
+  async function unpublish() {
+    if (!selected.size || !confirm(`Зняти з публікації вибрані записи (${selected.size})?`)) return;
+    setLoading(true);
+    try {
+      const chosen = items
+        .filter((item) => selected.has(`${item.kind}:${item.id}`))
+        .map((item) => ({ id: item.id, kind: item.kind }));
+      for (let index = 0; index < chosen.length; index += 500) {
+        const response = await fetch("/api/admin/catalog/bulk-unpublish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: chosen.slice(index, index + 500) }),
+        });
+        if (!response.ok) throw new Error((await response.json()).error);
+      }
+      setSelected(new Set());
+      await load(0, true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -132,6 +155,9 @@ export function SalonManagementPanel() {
           <input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(items.map((item) => `${item.kind}:${item.id}`)))} />
           Вибрати всі завантажені
         </label>
+        <Button variant="outline" disabled={!selected.size || loading} onClick={unpublish}>
+          <EyeOff />Зняти з публікації ({selected.size})
+        </Button>
         <Button variant="destructive" disabled={!selected.size || loading} onClick={remove}>
           <Trash2 />Видалити ({selected.size})
         </Button>
@@ -152,6 +178,7 @@ export function SalonManagementPanel() {
                       {imported ? "імпортований" : "створений вручну"}
                     </span>
                     {item.kind === "imported_owned" && <span className="bg-emerald-500/15 text-emerald-700 rounded-full px-2 py-0.5 text-xs"><Check className="mr-1 inline size-3" />є власник</span>}
+                    {item.publicationStatus !== "PUBLISHED" && <span className="bg-slate-500/15 text-slate-700 rounded-full px-2 py-0.5 text-xs"><EyeOff className="mr-1 inline size-3" />не опубліковано</span>}
                   </div>
                   <p className="text-muted-foreground mt-1 text-sm">{item.city}{item.address ? ` · ${item.address}` : ""}</p>
                   {item.owner && <p className="mt-1 text-sm">Власник: {item.owner}</p>}

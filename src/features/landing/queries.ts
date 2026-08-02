@@ -7,7 +7,7 @@ import { getRatingStatsForStaff } from "@/features/booking/rating";
 /** Real count of onboarded masters offering each top-level category. */
 export async function getVerticalCounts(): Promise<Map<string, number>> {
   const staffRows = await prisma.staff.findMany({
-    where: { onboardedAt: { not: null } },
+    where: { onboardedAt: { not: null }, isPublished: true },
     select: {
       id: true,
       services: {
@@ -40,7 +40,7 @@ export type TopMaster = {
 /** Highest-rated onboarded masters (real reviews only), best first. */
 export async function getTopMasters(limit = 6): Promise<TopMaster[]> {
   const staffRows = await prisma.staff.findMany({
-    where: { onboardedAt: { not: null } },
+    where: { onboardedAt: { not: null }, isPublished: true },
     select: {
       id: true,
       username: true,
@@ -123,10 +123,10 @@ export type LandingStats = { masters: number; completedBookings: number; cities:
 /** Honest, real counters for the social-proof block (never fabricated). */
 export async function getLandingStats(): Promise<LandingStats> {
   const [masters, completedBookings, cityRows] = await Promise.all([
-    prisma.staff.count({ where: { onboardedAt: { not: null } } }),
+    prisma.staff.count({ where: { onboardedAt: { not: null }, isPublished: true } }),
     prisma.booking.count({ where: { status: "COMPLETED" } }),
     prisma.location.findMany({
-      where: { staff: { some: { onboardedAt: { not: null } } } },
+      where: { staff: { some: { onboardedAt: { not: null }, isPublished: true } } },
       select: { city: true },
       distinct: ["city"],
     }),

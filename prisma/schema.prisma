@@ -109,6 +109,7 @@ model Staff {
   bio         String?
   avatarUrl   String?
   onboardedAt DateTime?
+  isPublished Boolean   @default(true)
 
   // Request-to-book settings.
   confirmationMode    ConfirmationMode @default(MANUAL)

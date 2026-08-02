@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const [locations, imported] = await Promise.all([
-    prisma.location.findMany({ where: { staff: { some: { onboardedAt: { not: null } } }, lat: { not: null }, lng: { not: null } }, select: { city: true, lat: true, lng: true } }),
+    prisma.location.findMany({ where: { staff: { some: { onboardedAt: { not: null }, isPublished: true } }, lat: { not: null }, lng: { not: null } }, select: { city: true, lat: true, lng: true } }),
     prisma.importedBusiness.findMany({ where: { publicationStatus: "PUBLISHED" }, select: { city: true, countryCode: true, lat: true, lng: true, importResults: { take: 1, orderBy: { createdAt: "desc" }, select: { job: { select: { city: { select: { name: true, countryCode: true } } } } } } } }),
   ]);
   const grouped = new Map<string, { city: string; lat: number; lng: number; count: number }>();

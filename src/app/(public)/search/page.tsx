@@ -52,14 +52,14 @@ export default async function SearchPage({
       select: { slug: true, name: true },
     }),
     prisma.location.findMany({
-      where: { staff: { some: { onboardedAt: { not: null } } } },
+      where: { staff: { some: { onboardedAt: { not: null }, isPublished: true } } },
       select: { city: true },
       distinct: ["city"],
     }),
     // Districts to offer — narrowed to the chosen city so the list stays relevant.
     prisma.location.findMany({
       where: {
-        staff: { some: { onboardedAt: { not: null } } },
+        staff: { some: { onboardedAt: { not: null }, isPublished: true } },
         district: { not: null },
       },
       select: { district: true, city: true },
@@ -105,6 +105,7 @@ export default async function SearchPage({
   let staffRows = await prisma.staff.findMany({
     where: {
       onboardedAt: { not: null },
+      isPublished: true,
       ...(Object.keys(locationFilter).length ? { location: locationFilter } : {}),
       services: { some: serviceFilter },
     },

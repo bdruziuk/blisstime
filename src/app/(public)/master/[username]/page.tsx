@@ -22,7 +22,7 @@ export default async function MasterPublicPage({
     },
   });
 
-  if (!staff || !staff.onboardedAt) notFound();
+  if (!staff || !staff.onboardedAt || !staff.isPublished) notFound();
 
   const [ratingStats, reviews] = await Promise.all([
     getStaffRatingStats(staff.id),

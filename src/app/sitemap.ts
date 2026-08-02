@@ -17,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const [combos, masters] = await Promise.all([
       getCatalogCombos(),
       prisma.staff.findMany({
-        where: { onboardedAt: { not: null } },
+        where: { onboardedAt: { not: null }, isPublished: true },
         select: { username: true, updatedAt: true },
       }),
     ]);
