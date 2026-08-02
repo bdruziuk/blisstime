@@ -72,15 +72,15 @@ export default async function IncomePage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {income.months.map((m) => (
-            <div key={m.key} className="flex items-center gap-3 text-sm">
-              <span className="text-muted-foreground w-28 shrink-0 capitalize">{m.label}</span>
-              <div className="bg-accent/40 h-5 flex-1 overflow-hidden rounded">
+            <div key={m.key} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 text-sm sm:flex sm:items-center sm:gap-3">
+              <span className="text-muted-foreground min-w-0 truncate capitalize sm:w-28 sm:shrink-0">{m.label}</span>
+              <div className="bg-accent/40 col-span-2 h-3 overflow-hidden rounded sm:h-5 sm:flex-1">
                 <div
                   className="bg-primary/70 h-full rounded"
                   style={{ width: `${Math.round((m.incomeCents / maxMonth) * 100)}%` }}
                 />
               </div>
-              <span className="w-24 shrink-0 text-right font-medium">{uah(m.incomeCents)}</span>
+              <span className="col-start-2 row-start-1 shrink-0 text-right font-medium sm:w-24">{uah(m.incomeCents)}</span>
             </div>
           ))}
         </CardContent>

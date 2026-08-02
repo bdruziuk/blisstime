@@ -7,6 +7,8 @@ import { ScheduleBlocksPanel } from "@/features/booking/components/schedule-bloc
 import { TelegramConnect } from "@/features/telegram/components/telegram-connect";
 import { LocationForm } from "@/features/booking/components/location-form";
 import { AvatarUpload } from "@/features/booking/components/avatar-upload";
+import { WorkingHoursForm } from "@/features/booking/components/working-hours-form";
+import type { Day } from "@/features/booking/schemas";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -31,6 +33,13 @@ export default async function SettingsPage() {
         <CardHeader><CardTitle>Фото профілю</CardTitle></CardHeader>
         <CardContent>
           <AvatarUpload username={staff.username} initialAvatarUrl={avatar ? `/api/avatar/${encodeURIComponent(staff.username)}?v=${avatar.updatedAt.getTime()}` : null} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Робочий графік</CardTitle></CardHeader>
+        <CardContent>
+          <WorkingHoursForm defaultHours={staff.location.workingHours as Partial<Record<Day, { open?: boolean; from?: string; to?: string }>>} />
         </CardContent>
       </Card>
       <Card>

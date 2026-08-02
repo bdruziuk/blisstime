@@ -305,3 +305,29 @@ export async function saveLocationAndFinish(
 
   redirect("/dashboard");
 }
+
+export async function updateWorkingHours(
+  _prevState: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const staff = await requireStaff();
+  const hours = Object.fromEntries(
+    (["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const).map((day) => [
+      day,
+      {
+        open: formData.get(`${day}_open`) === "on",
+        from: String(formData.get(`${day}_from`) || "09:00"),
+        to: String(formData.get(`${day}_to`) || "18:00"),
+      },
+    ])
+  );
+  const parsed = locationSchema.shape.hours.safeParse(hours);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (Object.values(parsed.data).some((day) => day.open && day.from >= day.to)) {
+    return { error: "Час завершення робочого дня має бути пізніше часу початку" };
+  }
+  await prisma.location.update({ where: { id: staff.locationId }, data: { workingHours: parsed.data } });
+  revalidatePath("/dashboard/settings");
+  revalidatePath(`/@${staff.username}`);
+  return undefined;
+}

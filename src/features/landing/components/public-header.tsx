@@ -41,10 +41,21 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
   return (
     <header className="border-border bg-background/80 sticky top-0 z-40 border-b backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3">
+        <button
+          type="button"
+          onClick={() => setMobileOpen((o) => !o)}
+          className="text-foreground md:hidden"
+          aria-label="Меню"
+          aria-expanded={mobileOpen}
+        >
+          {mobileOpen ? <X className="size-6" /> : <Menu className="size-6" />}
+        </button>
         <Link href="/">
           <Logo className="text-lg" />
         </Link>
-        <Suspense fallback={<span className="text-muted-foreground text-sm">Місто…</span>}><CitySelector /></Suspense>
+        <div className="hidden md:block">
+          <Suspense fallback={<span className="text-muted-foreground text-sm">Місто…</span>}><CitySelector /></Suspense>
+        </div>
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
@@ -99,22 +110,16 @@ export function PublicHeader({ user }: { user: { name: string | null; email: str
           {user ? <><Button render={<Link href="/dashboard" />} nativeButton={false} variant="ghost" size="sm" className="max-w-56"><UserRound /><span className="truncate">{user.name || user.email || "Кабінет"}</span></Button><Button type="button" variant="ghost" size="sm" onClick={() => void signOut({ redirectTo: "/" })}><LogOut />Вийти</Button></> : <><Button render={<Link href="/login" />} nativeButton={false} variant="ghost" size="sm">Увійти</Button><Button render={<Link href="/register" />} nativeButton={false} size="sm" className="rounded-full">Почати безкоштовно</Button></>}
         </div>
 
-        {/* Mobile toggle */}
-        <button
-          type="button"
-          onClick={() => setMobileOpen((o) => !o)}
-          className="text-foreground md:hidden"
-          aria-label="Меню"
-        >
-          {mobileOpen ? <X className="size-6" /> : <Menu className="size-6" />}
-        </button>
+      </div>
+
+      <div className="border-border mx-auto flex max-w-6xl items-center border-t px-6 py-2 md:hidden">
+        <Suspense fallback={<span className="text-muted-foreground text-sm">Місто…</span>}><CitySelector /></Suspense>
       </div>
 
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="border-border bg-background border-t px-6 py-4 md:hidden">
           <div className="flex flex-col gap-1">
-            <div className="mb-2"><Suspense fallback={null}><CitySelector /></Suspense></div>
             <p className="text-muted-foreground px-1 pt-1 text-xs font-semibold uppercase">Послуги</p>
             {VERTICALS.map((v) => (
               <Link

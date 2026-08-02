@@ -75,7 +75,7 @@ export default async function HomePage() {
                 <Input name="city" placeholder="Ваше місто, напр. Київ" />
                 <Button type="submit" className="group gap-2">
                   <SearchIcon className="size-4" />
-                  Знайти вільні слоти
+                  Записатись до майстра
                   <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </form>
