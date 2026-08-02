@@ -95,6 +95,7 @@ export async function getCatalogListings(
     include: {
       location: { include: { organization: true } },
       services: { where: serviceFilter, include: { category: true } },
+      avatar: { select: { updatedAt: true } },
     },
   });
 
@@ -119,6 +120,7 @@ export async function getCatalogListings(
         avgRating: stats?.avgRating,
         reviewCount: stats?.reviewCount,
         ratingSource: "platform" as const,
+        avatarUrl: s.avatar ? `/api/avatar/${encodeURIComponent(s.username)}?v=${s.avatar.updatedAt.getTime()}` : undefined,
       };
     });
 }

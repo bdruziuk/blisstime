@@ -112,6 +112,7 @@ export default async function SearchPage({
     include: {
       location: { include: { organization: true } },
       services: { where: serviceFilter, include: { category: true } },
+      avatar: { select: { updatedAt: true } },
     },
   });
   if (city) staffRows = staffRows.filter((staff) => sameCanonicalCity(staff.location.city, city, "UA"));
@@ -145,6 +146,7 @@ export default async function SearchPage({
         avgRating: stats?.avgRating,
         reviewCount: stats?.reviewCount,
         ratingSource: "platform" as const,
+        avatarUrl: s.avatar ? `/api/avatar/${encodeURIComponent(s.username)}?v=${s.avatar.updatedAt.getTime()}` : undefined,
       };
     });
 

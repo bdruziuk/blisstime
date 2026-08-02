@@ -6,6 +6,7 @@ import { SettingsForm } from "@/features/booking/components/settings-form";
 import { ScheduleBlocksPanel } from "@/features/booking/components/schedule-blocks-panel";
 import { TelegramConnect } from "@/features/telegram/components/telegram-connect";
 import { LocationForm } from "@/features/booking/components/location-form";
+import { AvatarUpload } from "@/features/booking/components/avatar-upload";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -22,9 +23,16 @@ export default async function SettingsPage() {
     where: { staffId: staff.id, endsAt: { gte: new Date() } },
     orderBy: { startsAt: "asc" },
   });
+  const avatar = await prisma.staffAvatar.findUnique({ where: { staffId: staff.id }, select: { updatedAt: true } });
 
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 px-6 py-10">
+      <Card>
+        <CardHeader><CardTitle>Фото профілю</CardTitle></CardHeader>
+        <CardContent>
+          <AvatarUpload username={staff.username} initialAvatarUrl={avatar ? `/api/avatar/${encodeURIComponent(staff.username)}?v=${avatar.updatedAt.getTime()}` : null} />
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>Налаштування записів</CardTitle>

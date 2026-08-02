@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin, ArrowRight, Phone, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,7 @@ export type MasterListingItem = {
   actionLabel?: string;
   phone?: string;
   ratingSource?: "platform" | "google";
+  avatarUrl?: string;
 };
 
 const TYPE_LABELS: Record<MasterListingItem["organizationType"], string> = {
@@ -51,8 +53,8 @@ export function MasterListingCard({ item }: { item: MasterListingItem }) {
     <Card className="card-hover">
       <CardContent className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="bg-accent text-accent-foreground font-heading flex size-12 shrink-0 items-center justify-center rounded-full text-base font-bold">
-            {initials}
+          <div className="bg-accent text-accent-foreground font-heading relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-full text-base font-bold">
+            {item.avatarUrl ? <Image src={item.avatarUrl} alt={item.displayName} fill sizes="48px" unoptimized className="object-cover" /> : initials}
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
