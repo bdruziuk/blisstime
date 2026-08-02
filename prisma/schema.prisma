@@ -122,11 +122,12 @@ model Staff {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
 
-  services        StaffService[]
-  bookings        Booking[]
-  waitlistEntries WaitlistEntry[]
-  scheduleBlocks  ScheduleBlock[]
-  clientNotes     ClientNote[]
+  services                StaffService[]
+  bookings                Booking[]
+  waitlistEntries         WaitlistEntry[]
+  scheduleBlocks          ScheduleBlock[]
+  clientNotes             ClientNote[]
+  claimedImportedBusiness ImportedBusiness? @relation("ImportedBusinessOwner")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -464,6 +465,8 @@ model ImportedBusiness {
   enrichmentError       String?
   enrichmentStartedAt   DateTime?
   enrichmentCompletedAt DateTime?
+  ownerClaimToken       String?                @unique
+  claimedByStaffId      String?                @unique
   manualReviewRequired  Boolean                @default(false)
   countryCode           String
   city                  String
@@ -492,8 +495,9 @@ model ImportedBusiness {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  importResults BusinessImportResult[]
-  serviceDrafts ImportedBusinessServiceDraft[]
+  importResults  BusinessImportResult[]
+  serviceDrafts  ImportedBusinessServiceDraft[]
+  claimedByStaff Staff?                         @relation("ImportedBusinessOwner", fields: [claimedByStaffId], references: [id], onDelete: SetNull)
 
   @@unique([provider, externalId])
   @@unique([slug])

@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RegisterForm } from "@/features/booking/components/register-form";
 import { Logo } from "@/components/logo";
 
-export default function RegisterPage() {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ claim?: string }> }) {
+  const { claim } = await searchParams;
   return (
     <main className="relative flex min-h-screen flex-col items-center justify-center gap-6 overflow-hidden p-8">
       <div
@@ -18,7 +19,7 @@ export default function RegisterPage() {
           <CardTitle className="text-xl">Реєстрація майстра</CardTitle>
         </CardHeader>
         <CardContent>
-          <RegisterForm />
+          <RegisterForm claimToken={claim} />
         </CardContent>
       </Card>
     </main>

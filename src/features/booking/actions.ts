@@ -50,6 +50,9 @@ export async function registerStaff(
     return { error: parsed.error.issues[0].message };
   }
   const { name, email, password } = parsed.data;
+  const claimToken = String(formData.get("claimToken") || "").trim();
+  const claimedBusiness = claimToken ? await prisma.importedBusiness.findUnique({ where: { ownerClaimToken: claimToken }, select: { id: true, name: true, formattedAddress: true, city: true, district: true, lat: true, lng: true, claimedByStaffId: true } }) : null;
+  if (claimToken && (!claimedBusiness || claimedBusiness.claimedByStaffId)) return { error: "Посилання власника недійсне або вже використане" };
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -64,24 +67,28 @@ export async function registerStaff(
       data: { name, email, passwordHash },
     });
     const organization = await tx.organization.create({
-      data: { type: "SOLO", name },
+      data: { type: claimedBusiness ? "SALON" : "SOLO", name: claimedBusiness?.name ?? name },
     });
     const location = await tx.location.create({
       data: {
         organizationId: organization.id,
-        address: "",
-        city: "",
+        address: claimedBusiness?.formattedAddress ?? "",
+        city: claimedBusiness?.city ?? "",
+        district: claimedBusiness?.district ?? null,
+        lat: claimedBusiness?.lat ?? null,
+        lng: claimedBusiness?.lng ?? null,
         workingHours: {},
       },
     });
-    await tx.staff.create({
+    const staff = await tx.staff.create({
       data: {
         userId: user.id,
         locationId: location.id,
         username,
-        displayName: name,
+        displayName: claimedBusiness?.name ?? name,
       },
     });
+    if (claimedBusiness) await tx.importedBusiness.update({ where: { id: claimedBusiness.id }, data: { claimedByStaffId: staff.id, ownerClaimToken: null } });
   });
 
   await signIn("credentials", {

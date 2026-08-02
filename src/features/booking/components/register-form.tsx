@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function RegisterForm() {
+export function RegisterForm({ claimToken }: { claimToken?: string }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     registerStaff,
     undefined
@@ -16,6 +16,7 @@ export function RegisterForm() {
   return (
     <>
       <form action={formAction} className="flex flex-col gap-4">
+        {claimToken && <input type="hidden" name="claimToken" value={claimToken} />}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="name">Ім&apos;я</Label>
           <Input id="name" name="name" required />

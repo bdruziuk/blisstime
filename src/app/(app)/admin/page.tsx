@@ -17,7 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { isSuperAdminEmail } from "@/lib/super-admin";
 import { SiteHeader } from "@/components/site-header";
 import { BUSINESS_TIMEZONE } from "@/features/booking/slots";
-import { CatalogDeletePanel } from "@/features/admin/catalog-delete-panel";
+import { SalonManagementPanel } from "@/features/admin/salon-management-panel";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("uk-UA", {
   timeZone: BUSINESS_TIMEZONE,
@@ -117,6 +117,7 @@ export default async function SuperAdminPage() {
     },
   });
   const importedBusinesses = await prisma.importedBusiness.findMany({
+    take: 0,
     where: { publicationStatus: "PUBLISHED" },
     orderBy: { updatedAt: "desc" },
     include: { serviceDrafts: { where: { status: "APPROVED" }, orderBy: { displayName: "asc" } } },
@@ -163,12 +164,9 @@ export default async function SuperAdminPage() {
           <StatCard icon={CalendarDays} label="Усього записів" value={totalBookings} />
         </section>
 
-        <CatalogDeletePanel
-          masters={users.filter((user) => user.staff).map((user) => ({ id: user.id, name: user.staff?.displayName || user.name || "Без імені", detail: user.email ?? user.staff?.username ?? user.id, protected: isSuperAdminEmail(user.email) }))}
-          salons={importedBusinesses.map((business) => ({ id: business.id, name: business.name, detail: business.formattedAddress }))}
-        />
+        <SalonManagementPanel />
 
-        <section className="flex flex-col gap-4">
+        <section className="hidden" aria-hidden="true">
           <div className="flex items-end justify-between gap-3">
             <div><h2 className="font-heading text-2xl font-bold">Імпортовані салони</h2><p className="text-muted-foreground text-sm">Опубліковані заклади без зареєстрованого акаунта власника.</p></div>
             <span className="text-muted-foreground text-sm">{importedBusinesses.length}</span>
