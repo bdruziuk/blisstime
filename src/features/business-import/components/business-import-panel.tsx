@@ -197,14 +197,17 @@ export function BusinessImportPanel({ categories }: { categories: Category[] }) 
     let totalProcessed = 0;
     try {
       while (true) {
-        const result = await responseJson<{ processed: number; failed: number; remaining: number; done: boolean }>(
+        const result = await responseJson<{ processed: number; failed: number; remaining: number; done: boolean; failures: Array<{ kind: string; value: string; error: string }> }>(
           await fetch(`/api/admin/business-import/regional-centers/backfill${force ? "?force=true" : ""}`, { method: "POST" })
         );
         force = false;
         totalProcessed += result.processed;
         setRegionalCenterBackfill({ running: true, processed: totalProcessed, remaining: result.remaining });
         if (result.done) break;
-        if (result.processed === 0) throw new Error(`Не вдалося обробити ${result.remaining} записів. Перевірте Google Places API.`);
+        if (result.processed === 0) {
+          const details = result.failures.map((failure) => `${failure.value}: ${failure.error}`).join("; ");
+          throw new Error(`Не вдалося обробити ${result.remaining} записів.${details ? ` ${details}` : " Перевірте Google Places API."}`);
+        }
       }
       setNotice(`Обласні центри перераховано. Оброблено записів: ${totalProcessed}.`);
     } catch (reason) {

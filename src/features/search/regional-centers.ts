@@ -42,6 +42,7 @@ const REGION_TO_CENTER = new Map([
   ["рівненська", "Рівне"], ["сумська", "Суми"], ["тернопільська", "Тернопіль"],
   ["харківська", "Харків"], ["херсонська", "Херсон"], ["хмельницька", "Хмельницький"],
   ["черкаська", "Черкаси"], ["чернівецька", "Чернівці"], ["чернігівська", "Чернігів"],
+  ["київ", "Київ"], ["місто київ", "Київ"],
   ["vinnytsia", "Вінниця"], ["volyn", "Луцьк"], ["dnipropetrovsk", "Дніпро"],
   ["donetsk", "Донецьк"], ["zhytomyr", "Житомир"], ["zakarpattia", "Ужгород"],
   ["zaporizhzhia", "Запоріжжя"], ["ivano-frankivsk", "Івано-Франківськ"], ["kyiv", "Київ"],
@@ -50,6 +51,8 @@ const REGION_TO_CENTER = new Map([
   ["rivne", "Рівне"], ["sumy", "Суми"], ["ternopil", "Тернопіль"],
   ["kharkiv", "Харків"], ["kherson", "Херсон"], ["khmelnytskyi", "Хмельницький"],
   ["cherkasy", "Черкаси"], ["chernivtsi", "Чернівці"], ["chernihiv", "Чернігів"],
+  ["kyiv city", "Київ"], ["city of kyiv", "Київ"],
+  ["kirovohradska", "Кропивницький"],
 ]);
 
 export function regionalCenterFromRegion(region: string | null | undefined): string | null {

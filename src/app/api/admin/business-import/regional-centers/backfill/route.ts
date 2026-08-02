@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       where: { countryCode: "UA", regionalCenter: null },
       orderBy: { createdAt: "asc" },
       take: BATCH_SIZE,
-      select: { id: true, externalId: true },
+      select: { id: true, externalId: true, name: true },
     });
     const cityResults = await Promise.allSettled(cities.map(async (city) => {
       const resolved = await googlePlacesProvider.resolveCity(city.externalId);
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
           data: { regionalCenter: resolved.regionalCenter },
         }),
       ]);
-      return city.id;
+      return { kind: "import" as const, value: city.name };
     }));
     const locations = cities.length < BATCH_SIZE ? await prisma.location.findMany({
       where: { regionalCenter: null, lat: { not: null }, lng: { not: null } },
@@ -50,17 +50,25 @@ export async function POST(request: NextRequest) {
         where: { city: { equals: location.city, mode: "insensitive" } },
         data: { regionalCenter: resolved.regionalCenter },
       });
-      return location.city;
+      return { kind: "location" as const, value: location.city };
     }));
     const [remainingImportCities, remainingLocations] = await Promise.all([
       prisma.businessImportCity.count({ where: { countryCode: "UA", regionalCenter: null } }),
       prisma.location.count({ where: { regionalCenter: null, lat: { not: null }, lng: { not: null } } }),
     ]);
     const results = [...cityResults, ...locationResults];
+    const failures = results.flatMap((result, index) => {
+      if (result.status !== "rejected") return [];
+      const source = index < cities.length
+        ? { kind: "import", value: cities[index].name }
+        : { kind: "location", value: locations[index - cities.length].city };
+      return [{ ...source, error: result.reason instanceof Error ? result.reason.message : String(result.reason) }];
+    });
     const remaining = remainingImportCities + remainingLocations;
     return NextResponse.json({
       processed: results.filter((result) => result.status === "fulfilled").length,
       failed: results.filter((result) => result.status === "rejected").length,
+      failures,
       remaining,
       done: remaining === 0,
       reset: force,
