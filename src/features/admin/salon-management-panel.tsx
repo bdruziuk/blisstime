@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CalendarDays, Check, Clock, Copy, ExternalLink, EyeOff, Loader2, MessageCircle, Phone, Scissors, Star, Trash2, Users } from "lucide-react";
+import { CalendarDays, Check, Clock, Copy, ExternalLink, Eye, EyeOff, Loader2, MessageCircle, Phone, Scissors, Star, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -149,6 +149,28 @@ export function SalonManagementPanel() {
     }
   }
 
+  async function publish() {
+    if (!selected.size || !confirm(`Опублікувати вибрані записи (${selected.size})?`)) return;
+    setLoading(true);
+    try {
+      const chosen = items
+        .filter((item) => selected.has(`${item.kind}:${item.id}`))
+        .map((item) => ({ id: item.id, kind: item.kind }));
+      for (let index = 0; index < chosen.length; index += 500) {
+        const response = await fetch("/api/admin/catalog/bulk-publish", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: chosen.slice(index, index + 500) }),
+        });
+        if (!response.ok) throw new Error((await response.json()).error);
+      }
+      setSelected(new Set());
+      await load(0, true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -169,6 +191,9 @@ export function SalonManagementPanel() {
           <input type="checkbox" checked={allSelected} onChange={() => setSelected(allSelected ? new Set() : new Set(items.map((item) => `${item.kind}:${item.id}`)))} />
           Вибрати всі завантажені
         </label>
+        <Button variant="outline" disabled={!selected.size || loading} onClick={publish}>
+          <Eye />Опублікувати ({selected.size})
+        </Button>
         <Button variant="outline" disabled={!selected.size || loading} onClick={unpublish}>
           <EyeOff />Зняти з публікації ({selected.size})
         </Button>
