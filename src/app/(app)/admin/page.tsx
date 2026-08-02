@@ -18,6 +18,7 @@ import { isSuperAdminEmail } from "@/lib/super-admin";
 import { SiteHeader } from "@/components/site-header";
 import { BUSINESS_TIMEZONE } from "@/features/booking/slots";
 import { SalonManagementPanel } from "@/features/admin/salon-management-panel";
+import { AdminUnifiedSearch } from "@/features/admin/admin-unified-search";
 
 const dateTimeFormatter = new Intl.DateTimeFormat("uk-UA", {
   timeZone: BUSINESS_TIMEZONE,
@@ -45,7 +46,10 @@ const statusLabels: Record<string, string> = {
   NO_SHOW: "не прийшов",
 };
 
-export default async function SuperAdminPage() {
+export default async function SuperAdminPage({ searchParams }: { searchParams: Promise<{ query?: string }> }) {
+  const { query: rawQuery } = await searchParams;
+  const query = (rawQuery ?? "").trim().slice(0, 100);
+  const normalizedQuery = query.toLocaleLowerCase("uk");
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
@@ -131,6 +135,15 @@ export default async function SuperAdminPage() {
     (sum, user) => sum + (user.staff?.bookings.length ?? 0),
     0
   );
+  const visibleUsers = normalizedQuery
+    ? users.filter((user) => [
+        user.name,
+        user.email,
+        user.staff?.displayName,
+        user.staff?.username,
+        user.staff?.location.organization.name,
+      ].some((value) => value?.toLocaleLowerCase("uk").includes(normalizedQuery)))
+    : users;
 
   return (
     <>
@@ -164,7 +177,9 @@ export default async function SuperAdminPage() {
           <StatCard icon={CalendarDays} label="Усього записів" value={totalBookings} />
         </section>
 
-        <SalonManagementPanel />
+        <AdminUnifiedSearch initialQuery={query} />
+
+        <SalonManagementPanel query={query} />
 
         <section className="hidden" aria-hidden="true">
           <div className="flex items-end justify-between gap-3">
@@ -175,12 +190,12 @@ export default async function SuperAdminPage() {
         </section>
 
         <section className="flex flex-col gap-4">
-          {users.length === 0 ? (
+          {visibleUsers.length === 0 ? (
             <div className="rounded-xl border border-dashed py-16 text-center">
-              <p className="font-medium">Зареєстрованих користувачів ще немає</p>
+              <p className="font-medium">{query ? "За цим запитом користувачів не знайдено" : "Зареєстрованих користувачів ще немає"}</p>
             </div>
           ) : (
-            users.map((user) => {
+            visibleUsers.map((user) => {
               const staff = user.staff;
               const clients = new Map<
                 string,

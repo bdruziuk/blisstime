@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Copy, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 type Item = {
   id: string;
@@ -23,10 +22,8 @@ const FILTERS = [
   { value: "imported_owned", label: "Імпортовані з власником" },
 ];
 
-export function SalonManagementPanel() {
+export function SalonManagementPanel({ query = "" }: { query?: string }) {
   const [filter, setFilter] = useState("all");
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [items, setItems] = useState<Item[]>([]);
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
@@ -35,16 +32,11 @@ export function SalonManagementPanel() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const marker = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 350);
-    return () => window.clearTimeout(timer);
-  }, [query]);
-
   const load = useCallback(async (nextPage: number, replace = false) => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ filter, page: String(nextPage) });
-      if (debouncedQuery) params.set("query", debouncedQuery);
+      if (query) params.set("query", query);
       const response = await fetch(`/api/admin/salons?${params}`, { cache: "no-store" });
       const data = await response.json() as { items: Item[]; total: number; hasMore: boolean; error?: string };
       if (!response.ok) throw new Error(data.error);
@@ -58,7 +50,7 @@ export function SalonManagementPanel() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedQuery, filter]);
+  }, [filter, query]);
 
   useEffect(() => {
     setSelected(new Set());
@@ -119,13 +111,7 @@ export function SalonManagementPanel() {
           <h2 className="font-heading text-2xl font-bold">Салони</h2>
           <p className="text-muted-foreground text-sm">Усього: {total}</p>
         </div>
-        <Input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Пошук за назвою салону..."
-          className="w-full sm:ml-auto sm:w-72"
-        />
-        <select value={filter} onChange={(event) => setFilter(event.target.value)} className="border-input bg-background h-9 rounded-md border px-3 text-sm">
+        <select value={filter} onChange={(event) => setFilter(event.target.value)} className="border-input bg-background ml-auto h-9 rounded-md border px-3 text-sm">
           {FILTERS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
         </select>
         <label className="flex items-center gap-2 text-sm">
