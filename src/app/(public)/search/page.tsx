@@ -75,6 +75,10 @@ export default async function SearchPage({
   const districts = isKyiv ? districtOptions : [];
   const requestedDistrict = canonicalKyivDistrict(districtParam);
   const district = isKyiv && requestedDistrict && districtOptions.includes(requestedDistrict) ? requestedDistrict : undefined;
+  const selectedCategoryName = category ? categories.find((item) => item.slug === category)?.name : undefined;
+  const pageTitle = selectedCategoryName
+    ? `${selectedCategoryName} у місті ${city ?? "вашому місті"}`
+    : `Послуги салонів краси у місті ${city ?? "вашому місті"}`;
 
   const minPriceCents = minPrice ? Math.round(Number(minPrice) * 100) : undefined;
   const maxPriceCents = maxPrice ? Math.round(Number(maxPrice) * 100) : undefined;
@@ -189,7 +193,7 @@ export default async function SearchPage({
   return (
     <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10">
       <div>
-        <h1 className="font-heading text-3xl font-bold">Знайти майстра</h1>
+        <h1 className="font-heading text-3xl font-bold">{pageTitle}</h1>
         <p className="text-muted-foreground mt-1">
           Оберіть послугу, місто й ціну — покажемо майстрів, які підходять.
         </p>
