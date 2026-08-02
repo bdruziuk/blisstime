@@ -12,6 +12,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const page = Math.max(0, Number(url.searchParams.get("page") ?? 0) || 0);
   const filter = url.searchParams.get("filter") ?? "all";
+  const query = (url.searchParams.get("query") ?? "").trim().toLocaleLowerCase().slice(0, 100);
   const [imported, manual] = await Promise.all([
     filter === "manual" ? [] : prisma.importedBusiness.findMany({ select: { id: true, name: true, formattedAddress: true, city: true, publicationStatus: true, ownerClaimToken: true, claimedByStaffId: true, claimedByStaff: { select: { displayName: true, user: { select: { email: true } } } } } }),
     filter === "imported_unowned" || filter === "imported_owned" ? [] : prisma.staff.findMany({ where: { onboardedAt: { not: null }, claimedImportedBusiness: null }, select: { id: true, userId: true, displayName: true, user: { select: { email: true } }, location: { select: { address: true, city: true, organization: { select: { name: true } } } } } }),
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
     ...imported.filter((item) => filter === "all" || (filter === "imported_owned" ? item.claimedByStaffId : !item.claimedByStaffId)).map((item) => ({ id: item.id, deleteId: item.id, kind: item.claimedByStaffId ? "imported_owned" : "imported_unowned", name: item.name, address: item.formattedAddress, city: item.city, owner: item.claimedByStaff ? item.claimedByStaff.displayName || item.claimedByStaff.user.email : null, claimToken: item.ownerClaimToken, publicationStatus: item.publicationStatus })),
     ...manual.map((item) => ({ id: item.id, deleteId: item.userId, kind: "manual", name: item.location.organization.name || item.displayName, address: item.location.address, city: item.location.city, owner: item.displayName || item.user.email, claimToken: null, publicationStatus: "PUBLISHED" })),
   ].sort((a, b) => a.name.localeCompare(b.name, "uk"));
+  if (query) items = items.filter((item) => item.name.toLocaleLowerCase().includes(query));
   const total = items.length;
   items = items.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   for (const item of items) {
