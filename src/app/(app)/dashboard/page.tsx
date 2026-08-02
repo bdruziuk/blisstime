@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Globe, Scissors, MapPin, ArrowUpRight, CalendarDays, Clock, Pencil, Receipt, Users, Wallet } from "lucide-react";
+import { Globe, Scissors, MapPin, ArrowUpRight, CalendarDays, Clock, Pencil, Receipt, Settings, Users, Wallet } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,12 +49,17 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-10">
-      <div>
-        <h1 className="font-heading text-3xl font-bold">Привіт, {staff.displayName}!</h1>
-        <p className="text-muted-foreground mt-1.5 flex items-center gap-1.5">
-          <MapPin className="size-4" />
-          {staff.location.city}, {staff.location.address}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-3xl font-bold">Привіт, {staff.displayName}!</h1>
+          <p className="text-muted-foreground mt-1.5 flex items-center gap-1.5">
+            <MapPin className="size-4" />
+            {staff.location.city}, {staff.location.address}
+          </p>
+        </div>
+        <Button render={<Link href="/dashboard/settings" aria-label="Налаштування" title="Налаштування" />} nativeButton={false} variant="outline" size="icon">
+          <Settings />
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -102,31 +107,6 @@ export default async function DashboardPage() {
             </Button>
           </CardContent>
         </Card>
-        <Card className="card-hover">
-          <CardContent className="flex h-full flex-col p-5">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-muted-foreground flex items-center gap-1.5 text-sm"><Users className="size-4" />Клієнти</p>
-              <span className="text-2xl font-bold">{clients.length}</span>
-            </div>
-            <p className="text-muted-foreground mt-3 text-sm">Унікальні клієнти, які хоча б раз записувалися до вас.</p>
-            <Button render={<Link href="/dashboard/clients" />} nativeButton={false} variant="outline" size="sm" className="mt-4 w-full">
-              Переглянути клієнтів <ArrowUpRight />
-            </Button>
-          </CardContent>
-        </Card>
-        <Card className="card-hover">
-          <CardContent className="flex h-full flex-col p-5">
-            <p className="text-muted-foreground flex items-center gap-1.5 text-sm"><Wallet className="size-4" />Доходи цього місяця</p>
-            <p className="mt-1.5 text-2xl font-bold">{Math.round(income.thisMonthCents / 100).toLocaleString("uk-UA")} грн</p>
-            <div className="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
-              <p className="flex items-center gap-1"><Users className="size-3.5" />Візитів: {income.thisMonthVisits}</p>
-              <p className="flex items-center gap-1"><Receipt className="size-3.5" />Середній чек: {Math.round(income.avgCheckCents / 100).toLocaleString("uk-UA")} грн</p>
-            </div>
-            <Button render={<Link href="/dashboard/income" />} nativeButton={false} variant="outline" size="sm" className="mt-4 w-full">
-              Детальніше про доходи <ArrowUpRight />
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
@@ -167,6 +147,34 @@ export default async function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card className="card-hover">
+          <CardContent className="flex h-full flex-col p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-muted-foreground flex items-center gap-1.5 text-sm"><Users className="size-4" />Клієнти</p>
+              <span className="text-2xl font-bold">{clients.length}</span>
+            </div>
+            <p className="text-muted-foreground mt-3 text-sm">Унікальні клієнти, які хоча б раз записувалися до вас.</p>
+            <Button render={<Link href="/dashboard/clients" />} nativeButton={false} variant="outline" size="sm" className="mt-4 w-full">
+              Переглянути клієнтів <ArrowUpRight />
+            </Button>
+          </CardContent>
+        </Card>
+        <Card className="card-hover">
+          <CardContent className="flex h-full flex-col p-5">
+            <p className="text-muted-foreground flex items-center gap-1.5 text-sm"><Wallet className="size-4" />Доходи цього місяця</p>
+            <p className="mt-1.5 text-2xl font-bold">{Math.round(income.thisMonthCents / 100).toLocaleString("uk-UA")} грн</p>
+            <div className="text-muted-foreground mt-3 grid grid-cols-2 gap-2 text-xs">
+              <p className="flex items-center gap-1"><Users className="size-3.5" />Візитів: {income.thisMonthVisits}</p>
+              <p className="flex items-center gap-1"><Receipt className="size-3.5" />Середній чек: {Math.round(income.avgCheckCents / 100).toLocaleString("uk-UA")} грн</p>
+            </div>
+            <Button render={<Link href="/dashboard/income" />} nativeButton={false} variant="outline" size="sm" className="mt-4 w-full">
+              Детальніше про доходи <ArrowUpRight />
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 }
