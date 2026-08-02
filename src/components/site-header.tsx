@@ -12,6 +12,7 @@ import {
 import { auth, signOut } from "@/lib/auth";
 import { isSuperAdminEmail } from "@/lib/super-admin";
 import { Logo } from "@/components/logo";
+import { SiteHeaderMobileMenu } from "@/components/site-header-mobile-menu";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Кабінет", icon: LayoutDashboard },
@@ -31,7 +32,7 @@ export async function SiteHeader() {
         <Link href="/dashboard">
           <Logo className="text-lg" />
         </Link>
-        <nav className="flex items-center gap-0.5 text-sm">
+        <nav className="hidden items-center gap-0.5 text-sm md:flex">
           {isSuperAdminEmail(session?.user?.email) && (
             <Link
               href="/admin"
@@ -74,6 +75,7 @@ export async function SiteHeader() {
             </form>
           )}
         </nav>
+        {session?.user && <SiteHeaderMobileMenu isAdmin={isSuperAdminEmail(session.user.email)} />}
       </div>
     </header>
   );
