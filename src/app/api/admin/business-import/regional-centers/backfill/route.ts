@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSuperAdminUser } from "@/features/business-import/admin-auth";
 import { apiError, unauthorized } from "@/features/business-import/api-response";
@@ -6,9 +6,17 @@ import { googlePlacesProvider } from "@/features/business-import/providers/googl
 
 const BATCH_SIZE = 5;
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   if (!(await getSuperAdminUser())) return unauthorized();
   try {
+    const force = request.nextUrl.searchParams.get("force") === "true";
+    if (force) {
+      await prisma.$transaction([
+        prisma.businessImportCity.updateMany({ where: { countryCode: "UA" }, data: { regionalCenter: null } }),
+        prisma.importedBusiness.updateMany({ where: { countryCode: "UA" }, data: { regionalCenter: null } }),
+        prisma.location.updateMany({ data: { regionalCenter: null } }),
+      ]);
+    }
     const cities = await prisma.businessImportCity.findMany({
       where: { countryCode: "UA", regionalCenter: null },
       orderBy: { createdAt: "asc" },
@@ -55,6 +63,7 @@ export async function POST() {
       failed: results.filter((result) => result.status === "rejected").length,
       remaining,
       done: remaining === 0,
+      reset: force,
     });
   } catch (error) {
     return apiError(error);

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { catalogCityName } from "@/features/business-import/services/city-normalizer";
-import { nearestRegionalCenter, UKRAINE_REGIONAL_CENTERS } from "@/features/search/regional-centers";
+import { UKRAINE_REGIONAL_CENTERS } from "@/features/search/regional-centers";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export async function GET() {
   const cities = [...grouped.values()].map((row) => {
     const lat = row.lat / row.count;
     const lng = row.lng / row.count;
-    return { city: row.city, lat, lng, regionalCenter: row.regionalCenter ?? (regionalNames.has(row.city) ? row.city : nearestRegionalCenter(lat, lng)), isRegionalCenter: regionalNames.has(row.city) };
+    return { city: row.city, lat, lng, regionalCenter: row.regionalCenter ?? (regionalNames.has(row.city) ? row.city : "Інші міста"), isRegionalCenter: regionalNames.has(row.city) };
   }).sort((a, b) => a.city.localeCompare(b.city, "uk"));
   return NextResponse.json({ cities }, { headers: { "Cache-Control": "no-store" } });
 }

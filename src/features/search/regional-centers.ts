@@ -42,10 +42,22 @@ const REGION_TO_CENTER = new Map([
   ["рівненська", "Рівне"], ["сумська", "Суми"], ["тернопільська", "Тернопіль"],
   ["харківська", "Харків"], ["херсонська", "Херсон"], ["хмельницька", "Хмельницький"],
   ["черкаська", "Черкаси"], ["чернівецька", "Чернівці"], ["чернігівська", "Чернігів"],
+  ["vinnytsia", "Вінниця"], ["volyn", "Луцьк"], ["dnipropetrovsk", "Дніпро"],
+  ["donetsk", "Донецьк"], ["zhytomyr", "Житомир"], ["zakarpattia", "Ужгород"],
+  ["zaporizhzhia", "Запоріжжя"], ["ivano-frankivsk", "Івано-Франківськ"], ["kyiv", "Київ"],
+  ["kirovohrad", "Кропивницький"], ["luhansk", "Луганськ"], ["lviv", "Львів"],
+  ["mykolaiv", "Миколаїв"], ["odesa", "Одеса"], ["poltava", "Полтава"],
+  ["rivne", "Рівне"], ["sumy", "Суми"], ["ternopil", "Тернопіль"],
+  ["kharkiv", "Харків"], ["kherson", "Херсон"], ["khmelnytskyi", "Хмельницький"],
+  ["cherkasy", "Черкаси"], ["chernivtsi", "Чернівці"], ["chernihiv", "Чернігів"],
 ]);
 
 export function regionalCenterFromRegion(region: string | null | undefined): string | null {
   if (!region) return null;
-  const key = region.toLocaleLowerCase("uk").replace(/\b(?:область|обл\.?|region)\b/giu, "").trim();
+  const key = region
+    .toLocaleLowerCase("uk")
+    .replace(/[’']/g, "")
+    .replace(/(?:\s+область|\s+обл\.?|\s+oblast|\s+region)$/iu, "")
+    .trim();
   return REGION_TO_CENTER.get(key) ?? null;
 }

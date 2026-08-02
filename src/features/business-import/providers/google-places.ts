@@ -10,7 +10,7 @@ import type {
 import { IMPORT_CONFIG } from "../config/import-config";
 import { isValidBounds } from "../services/grid-builder";
 import { withRetry } from "../services/retry";
-import { nearestRegionalCenter, regionalCenterFromRegion } from "@/features/search/regional-centers";
+import { regionalCenterFromRegion } from "@/features/search/regional-centers";
 
 const API_BASE = "https://places.googleapis.com/v1";
 
@@ -179,7 +179,7 @@ export class GooglePlacesImportProvider implements BusinessImportProvider {
       name: localizedCity,
       formattedName: place.formattedAddress ?? place.displayName.text,
       countryCode: country?.shortText?.toUpperCase() ?? "XX",
-      regionalCenter: regionalCenterFromRegion(region?.longText) ?? nearestRegionalCenter(place.location.latitude ?? 0, place.location.longitude ?? 0),
+      regionalCenter: regionalCenterFromRegion(region?.longText) ?? regionalCenterFromRegion(region?.shortText),
       centerLat: place.location.latitude ?? (bounds.south + bounds.north) / 2,
       centerLng: place.location.longitude ?? (bounds.west + bounds.east) / 2,
       bounds,
