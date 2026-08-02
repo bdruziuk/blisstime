@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { SearchFilters } from "@/features/search/components/search-filters";
-import { MasterListingCard, type MasterListingItem } from "@/features/search/components/master-listing-card";
+import type { MasterListingItem } from "@/features/search/components/master-listing-card";
+import { LazyListingGrid } from "@/features/search/components/lazy-listing-grid";
 import { getRatingStatsForStaff } from "@/features/booking/rating";
 import { canonicalCityName, catalogCityName, sameCanonicalCity } from "@/features/business-import/services/city-normalizer";
 import { slugify } from "@/lib/slugify";
@@ -234,11 +235,7 @@ export default async function SearchPage({
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {results.map((item) => (
-                <MasterListingCard key={item.staffId} item={item} />
-              ))}
-            </div>
+            <LazyListingGrid key={`${city ?? "all"}:${district ?? "all"}:${category ?? "all"}:${type ?? "all"}:${sort ?? "default"}`} items={results} />
           )}
         </div>
       </div>
