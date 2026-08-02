@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { VERTICALS } from "@/features/landing/verticals";
@@ -10,7 +10,7 @@ import { CitySelector } from "./city-selector";
 import { slugify } from "@/lib/slugify";
 import { canonicalCityName } from "@/features/business-import/services/city-normalizer";
 
-export function PublicHeader() {
+export function PublicHeader({ user }: { user: { name: string | null; email: string | null } | null }) {
   const [servicesOpen, setServicesOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const servicesRef = useRef<HTMLDivElement>(null);
@@ -95,17 +95,7 @@ export function PublicHeader() {
           >
             УКР
           </span>
-          <Button render={<Link href="/login" />} nativeButton={false} variant="ghost" size="sm">
-            Увійти
-          </Button>
-          <Button
-            render={<Link href="/register" />}
-            nativeButton={false}
-            size="sm"
-            className="rounded-full"
-          >
-            Почати безкоштовно
-          </Button>
+          {user ? <Button render={<Link href="/dashboard" />} nativeButton={false} variant="ghost" size="sm" className="max-w-56"><UserRound /><span className="truncate">{user.name || user.email || "Кабінет"}</span></Button> : <><Button render={<Link href="/login" />} nativeButton={false} variant="ghost" size="sm">Увійти</Button><Button render={<Link href="/register" />} nativeButton={false} size="sm" className="rounded-full">Почати безкоштовно</Button></>}
         </div>
 
         {/* Mobile toggle */}
@@ -141,14 +131,7 @@ export function PublicHeader() {
             <Link href="/register" onClick={() => setMobileOpen(false)} className="rounded-lg px-2 py-2 text-sm font-medium">
               Для бізнесу
             </Link>
-            <div className="mt-2 flex gap-2">
-              <Button render={<Link href="/login" />} nativeButton={false} variant="outline" size="sm" className="flex-1">
-                Увійти
-              </Button>
-              <Button render={<Link href="/register" />} nativeButton={false} size="sm" className="flex-1">
-                Почати
-              </Button>
-            </div>
+            <div className="mt-2 flex gap-2">{user ? <Button render={<Link href="/dashboard" onClick={() => setMobileOpen(false)} />} nativeButton={false} variant="outline" size="sm" className="flex-1"><UserRound />{user.name || user.email || "Кабінет"}</Button> : <><Button render={<Link href="/login" />} nativeButton={false} variant="outline" size="sm" className="flex-1">Увійти</Button><Button render={<Link href="/register" />} nativeButton={false} size="sm" className="flex-1">Почати</Button></>}</div>
           </div>
         </div>
       )}
