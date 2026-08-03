@@ -1,160 +1,190 @@
 # EasyService
 
-EasyService — українська web-first платформа для beauty-майстрів і їхніх клієнтів. Репозиторій має робочу назву **BlissTime**.
+EasyService is a Ukrainian web-first platform for beauty professionals, salons, and their clients. The repository was originally developed under the working name **BlissTime**.
 
-Продукт поєднує:
+The product includes:
 
-- кабінет майстра з календарем, послугами, CRM, доходами та Telegram-сповіщеннями;
-- публічний каталог із пошуком, SEO-сторінками та записом без реєстрації;
-- AI-імпорт прайс-листа у структуровані послуги.
+- a professional dashboard with bookings, services, CRM, income tracking, working hours, and Telegram notifications;
+- a public catalog with city- and service-based search, SEO-friendly routes, and booking without registration;
+- a super-admin panel for managing users, professionals, salons, publication status, and imported businesses;
+- a Google Places importer for discovering salons and importing contact details, ratings, locations, and business metadata;
+- AI-assisted price-list extraction into structured services.
 
-## Технології
+## Technology stack
 
-- Next.js 15 App Router, React 19, TypeScript;
-- Tailwind CSS 4, shadcn/ui та Base UI;
-- PostgreSQL, Prisma 7;
-- Auth.js 5 з email/password;
+- Next.js 15 App Router, React 19, and TypeScript;
+- Tailwind CSS 4, shadcn/ui, and Base UI;
+- PostgreSQL and Prisma 7;
+- Auth.js 5 with email and password authentication;
 - Telegram Bot API;
+- Google Places API (New);
 - OpenAI API;
-- Vitest для unit-тестів календарної логіки.
+- Vitest for unit and integration tests.
 
-## Структура
+## Project structure
 
 ```text
-src/app/(app)       кабінет, реєстрація та onboarding
-src/app/(public)    лендінг, каталог, профілі й відгуки
-src/app/api         Auth.js, Telegram webhook і worker нагадувань
-src/features        бізнес-модулі за функціональністю
-src/lib             Prisma, Auth.js, Telegram та спільні утиліти
-prisma              схема, міграції та seed
-scripts             локальний Telegram polling
+src/app/(app)       dashboard, authentication, onboarding, and admin pages
+src/app/(public)    landing page, catalog, public profiles, and reviews
+src/app/api         Auth.js, admin APIs, webhooks, and background workers
+src/features        feature-oriented business modules
+src/lib             Prisma, Auth.js, Telegram, and shared utilities
+prisma              database schema, migrations, and seed data
+scripts             local maintenance and Telegram polling scripts
+docs                implementation and operations documentation
 ```
 
-Кабінет і каталог працюють в одному Next.js застосунку та використовують спільну базу даних.
+The dashboard and public catalog run in the same Next.js application and use a shared PostgreSQL database.
 
-## Вимоги
+## Requirements
 
-- Node.js 20 або новіший;
+- Node.js 20 or newer;
 - npm;
-- PostgreSQL із підтримкою розширення `btree_gist`;
-- Telegram-бот — опційно для локальної розробки;
-- OpenAI API key — опційно для AI-імпорту.
+- PostgreSQL with the `btree_gist` extension;
+- a Telegram bot for Telegram notifications and local polling;
+- a Google Places API key for salon imports;
+- an OpenAI API key for AI-assisted price-list imports.
 
-## Локальний запуск
+## Local development
 
-1. Встановіть залежності:
+1. Install dependencies:
 
    ```bash
    npm ci
    ```
 
-2. Створіть локальний `.env`:
+2. Create a local environment file:
 
    ```bash
    cp .env.example .env
    ```
 
-   У PowerShell:
+   PowerShell:
 
    ```powershell
    Copy-Item .env.example .env
    ```
 
-3. Заповніть щонайменше `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL` і `NEXT_PUBLIC_APP_URL`.
+3. At minimum, configure `DATABASE_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL`, and `NEXT_PUBLIC_APP_URL`.
 
-4. Застосуйте міграції та заповніть довідник категорій:
+4. Apply database migrations and seed the service taxonomy:
 
    ```bash
    npx prisma migrate deploy
    npm run db:seed
    ```
 
-5. Запустіть dev-сервер:
+5. Start the development server:
 
    ```bash
    npm run dev
    ```
 
-Застосунок буде доступний на [http://localhost:3000](http://localhost:3000).
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
-## Змінні середовища
+## Environment variables
 
-| Змінна | Призначення |
+| Variable | Purpose |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string |
-| `NEXTAUTH_SECRET` | Секрет підпису Auth.js |
-| `NEXTAUTH_URL` | Базова URL для Auth.js |
-| `NEXT_PUBLIC_APP_URL` | Публічна URL застосунку |
-| `SUPER_ADMIN_EMAILS` | Email суперадмінів через кому; надає доступ до `/admin` |
-| `TELEGRAM_BOT_TOKEN` | Токен Telegram-бота |
-| `TELEGRAM_BOT_USERNAME` | Username бота без `@` |
-| `TELEGRAM_WEBHOOK_SECRET` | Перевірка запитів Telegram webhook |
-| `CRON_SECRET` | Захист endpoint нагадувань |
-| `OPENAI_API_KEY` | AI-імпорт прайс-листа |
-| `GOOGLE_PLACES_SERVER_API_KEY` | Серверний ключ Google Places API (New) для імпорту салонів |
-| `ALLOW_INDEXING` | Дозволяє індексацію лише за точного значення `true` |
+| `NEXTAUTH_SECRET` | Auth.js signing secret |
+| `NEXTAUTH_URL` | Base URL used by Auth.js |
+| `NEXT_PUBLIC_APP_URL` | Public application URL |
+| `SUPER_ADMIN_EMAILS` | Comma-separated super-admin email addresses with access to `/admin` |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token |
+| `TELEGRAM_BOT_USERNAME` | Bot username without `@` |
+| `TELEGRAM_WEBHOOK_SECRET` | Secret used to verify Telegram webhook requests |
+| `CRON_SECRET` | Bearer token protecting worker endpoints |
+| `OPENAI_API_KEY` | OpenAI API key for AI-assisted price-list imports |
+| `GOOGLE_PLACES_SERVER_API_KEY` | Server-side Google Places API (New) key used by the salon importer |
+| `ALLOW_INDEXING` | Enables search-engine indexing only when set exactly to `true` |
 
-Повний шаблон міститься у `.env.example`. Файл `.env` не можна комітити.
+The complete template is available in `.env.example`. Never commit the local `.env` file.
 
-## Команди
+## Commands
 
 ```bash
-npm run dev          # локальний Next.js із Turbopack
-npm run build        # production build
-npm run start        # міграції та запуск production-сервера
-npm run start:web    # запуск без автоматичних міграцій
-npm run lint         # ESLint
-npm test             # усі unit-тести один раз
-npm run test:watch   # Vitest у watch-режимі
-npm run db:seed      # довідник категорій послуг
-npm run bot:dev      # Telegram long polling для локальної розробки
+npm run dev          # start Next.js locally with Turbopack
+npm run build        # create a production build
+npm run start        # apply migrations and start the production server
+npm run start:web    # start production without automatically applying migrations
+npm run lint         # run ESLint
+npm test             # run the test suite once
+npm run test:watch   # run Vitest in watch mode
+npm run db:seed      # seed the service-category taxonomy
+npm run bot:dev      # run Telegram long polling locally
 ```
 
-## База даних і бронювання
+## Database and booking rules
 
-Гроші зберігаються як цілі копійки, а часові значення — в UTC. Бізнес-таймзона зараз фіксована як `Europe/Kyiv`.
+Money is stored as integer minor units, and timestamps are stored in UTC. The business timezone is currently fixed to `Europe/Kyiv`.
 
-PostgreSQL exclusion constraint не дозволяє одному майстру мати записи, що перетинаються. Активні `PENDING` hold також блокують слот. Слоти генеруються з кроком 15 хвилин із робочих годин за вирахуванням записів і блокувань графіка.
+A PostgreSQL exclusion constraint prevents overlapping bookings for the same professional. Active `PENDING` holds also reserve a time slot. Available slots are generated in 15-minute increments from working hours, breaks, time off, existing bookings, and active holds.
 
-Не редагуйте вже застосовані міграції. Зміни схеми оформлюйте новою Prisma-міграцією.
+Do not edit migrations that have already been deployed. Create a new Prisma migration for every schema change.
 
-## Telegram
+## Business importer
 
-У production Telegram надсилає updates на:
+The importer discovers beauty businesses through Google Places and stores processing state in the database. Imports can be started and moderated from `/admin/business-import`.
 
-```text
-POST /api/telegram/webhook
-```
+Imported businesses may include:
 
-Нагадування запускаються scheduler-запитом на:
+- localized name and address;
+- city, district, regional center, and coordinates;
+- national and international phone numbers;
+- website and Google Maps URLs;
+- Google rating and review count;
+- opening hours and business status;
+- automatically inferred beauty categories based on the business name.
 
-```text
-GET|POST /api/worker/telegram-reminders
-Authorization: Bearer <CRON_SECRET>
-```
+Google Places does not expose business email addresses. An email-discovery workflow would need to inspect the business website separately.
 
-DB-backed імпортер салонів обробляється короткими викликами:
+The background worker accepts short, repeatable requests:
 
 ```text
 GET|POST /api/worker/business-import
 Authorization: Bearer <CRON_SECRET>
 ```
 
-Детальна конфігурація: [`docs/business-importer.md`](docs/business-importer.md).
+Detailed configuration is documented in [`docs/business-importer.md`](docs/business-importer.md).
 
-Для локальної розробки без публічного webhook використовуйте `npm run bot:dev`.
+## Telegram
 
-## SEO та запуск
+In production, Telegram sends updates to:
 
-До публічного запуску всі маршрути отримують `noindex, nofollow`, а `robots.txt` забороняє crawling. Індексація вмикається тільки через:
+```text
+POST /api/telegram/webhook
+```
+
+The reminder worker is triggered through:
+
+```text
+GET|POST /api/worker/telegram-reminders
+Authorization: Bearer <CRON_SECRET>
+```
+
+For local development without a public webhook, run `npm run bot:dev`.
+
+## SEO and indexing
+
+Until public launch, routes return `noindex, nofollow`, and `robots.txt` prevents crawling. Enable indexing only in the production environment:
 
 ```env
 ALLOW_INDEXING=true
 ```
 
-Не встановлюйте цю змінну для preview або staging-середовищ.
+Do not enable this variable for preview or staging deployments.
 
-## Перевірка перед змінами
+Public search routes use readable Latin slugs:
+
+```text
+/{city}/{service}
+/{kyiv}/{district}/{service}
+```
+
+Search queries can be appended with the `q` query parameter while city, district, and service remain path segments.
+
+## Validation before deployment
 
 ```bash
 npm test
@@ -162,4 +192,4 @@ npm run lint
 npm run build
 ```
 
-Додаткові продуктові правила та архітектурні обмеження описані в `CLAUDE.md`.
+Additional product rules and architectural constraints are documented in `CLAUDE.md`.
