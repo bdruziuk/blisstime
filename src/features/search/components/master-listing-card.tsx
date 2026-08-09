@@ -68,7 +68,7 @@ export function MasterListingCard({ item }: { item: MasterListingItem }) {
                   <Star className="fill-primary text-primary size-3" />
                   {item.avgRating!.toFixed(1)}
                   <span className="text-muted-foreground font-normal">({item.reviewCount})</span>
-                  <span className={`ml-1 rounded px-1.5 py-0.5 text-[0.6rem] font-semibold ${item.ratingSource === "google" ? "bg-blue-500/10 text-blue-700 dark:text-blue-300" : "bg-primary/10 text-primary"}`}>{item.ratingSource === "google" ? "Google" : "EasyService"}</span>
+                  <span className={`ml-1 rounded px-1.5 py-0.5 text-[0.6rem] font-semibold ${item.ratingSource === "google" ? "bg-blue-500/10 text-blue-700 dark:text-blue-300" : "bg-primary/10 text-primary"}`}>{item.ratingSource === "google" ? "Google" : "Get Node"}</span>
                 </span>
               )}
             </div>

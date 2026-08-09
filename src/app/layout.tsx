@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EasyService",
+  title: "Get Node",
   description: "Маркетплейс послуг та легка CRM для майстрів і салонів краси",
   // robots.txt only asks crawlers not to fetch; noindex is what actually keeps
   // pages out of the index (and drops already-indexed ones).

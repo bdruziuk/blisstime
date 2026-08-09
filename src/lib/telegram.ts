@@ -8,7 +8,7 @@ function token(): string | null {
   return process.env.TELEGRAM_BOT_TOKEN?.trim() || null;
 }
 
-export const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME?.trim() || "EasyServiceBookingBot";
+export const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME?.trim() || "GetNodeBookingBot";
 
 export type InlineButton = { text: string; callback_data?: string; url?: string };
 

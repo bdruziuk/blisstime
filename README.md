@@ -1,6 +1,6 @@
-# EasyService
+# Get Node
 
-EasyService is a Ukrainian web-first platform for beauty professionals, salons, and their clients. The repository was originally developed under the working name **BlissTime**.
+Get Node is a Ukrainian web-first platform for beauty professionals, salons, and their clients.
 
 The product includes:
 

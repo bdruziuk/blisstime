@@ -38,7 +38,7 @@ async function safeFetch(start: URL): Promise<{ url: URL; html: string }> {
   let url = start;
   for (let redirects = 0; redirects <= 3; redirects += 1) {
     await assertPublicDns(url);
-    const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(12_000), headers: { "User-Agent": "EasyServicePriceImporter/1.0" } });
+    const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(12_000), headers: { "User-Agent": "GetNodePriceImporter/1.0" } });
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
       const next = location ? parsePublicWebsite(new URL(location, url).toString()) : null;

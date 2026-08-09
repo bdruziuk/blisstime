@@ -1,4 +1,4 @@
-# CLAUDE.md — EasyService (репозиторій BlissTime)
+# CLAUDE.md — Get Node
 
 ## Що це за проект
 

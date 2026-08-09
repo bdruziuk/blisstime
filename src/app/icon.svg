@@ -1,17 +1,14 @@
 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="es-favicon-gradient" x1="8" y1="4" x2="52" y2="60" gradientUnits="userSpaceOnUse">
+    <linearGradient id="get-node-icon-gradient" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
       <stop stop-color="#F26451" />
       <stop offset="1" stop-color="#D2382A" />
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="url(#es-favicon-gradient)" />
-  <path
-    d="M17 33 L27 44 C 36 30 45 22 52 17"
-    stroke="#FFFFFF"
-    stroke-width="8"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    fill="none"
-  />
+  <rect width="64" height="64" rx="15" fill="#FFFFFF" />
+  <path d="M12 32 32 13 52 32 32 51 12 32Z M12 32H52" fill="none" stroke="url(#get-node-icon-gradient)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="12" cy="32" r="7" fill="url(#get-node-icon-gradient)" />
+  <circle cx="32" cy="13" r="7" fill="url(#get-node-icon-gradient)" />
+  <circle cx="52" cy="32" r="7" fill="url(#get-node-icon-gradient)" />
+  <circle cx="32" cy="51" r="7" fill="url(#get-node-icon-gradient)" />
 </svg>

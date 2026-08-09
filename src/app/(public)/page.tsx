@@ -156,7 +156,7 @@ export default async function HomePage() {
       <section className="mx-auto w-full max-w-3xl px-6 py-20 text-center">
         <div className="from-primary to-primary/85 text-primary-foreground flex flex-col items-center gap-4 rounded-3xl bg-gradient-to-b p-10 shadow-lg">
           <h2 className="font-heading text-2xl font-bold text-balance sm:text-3xl">
-            Спробуйте EasyService безкоштовно
+            Спробуйте Get Node безкоштовно
           </h2>
           <p className="max-w-lg text-balance opacity-90">
             Користування платформою безкоштовне. Карта не потрібна.
