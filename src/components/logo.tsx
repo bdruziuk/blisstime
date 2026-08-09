@@ -20,8 +20,8 @@ export function Logo({ className }: { className?: string }) {
             y2="35"
             gradientUnits="userSpaceOnUse"
           >
-            <stop stopColor="#B77A4E" />
-            <stop offset="1" stopColor="#704329" />
+            <stop stopColor="#8B9098" />
+            <stop offset="1" stopColor="#3F444C" />
           </linearGradient>
         </defs>
         <path d="M10 20 26 7 42 20 26 33 10 20Z M10 20H42" stroke="url(#get-node-logo-gradient)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
